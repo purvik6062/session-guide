@@ -7,7 +7,7 @@
   - **Ubuntu**: Install Docker Engine with `sudo apt update && sudo apt install docker.io` (or follow [official docs](https://docs.docker.com/engine/install/ubuntu/)).
   - **Windows**: Install Docker Desktop from [docker.com](https://www.docker.com/products/docker-desktop/). Ensure it's running and configured (e.g., enable WSL2 backend if using WSL).
 - Git installed on your host machine for cloning the repo.
-- An Ethereum wallet with Arbitrum Sepolia testnet ETH (get from a faucet like [Arbitrum's official faucet](https://faucet.arbitrum.io/)).
+- An Ethereum wallet with Arbitrum Sepolia testnet ETH (get from a faucet like [Arbitrum Sepolia Faucet](https://faucet.lamprosdao.com/)).
 - Your wallet's private key (prefixed with `0x`) for the `.env` file—**never commit this to Git or share publicly**.
 
 ## Clone the Repository for Your Challenge
@@ -41,32 +41,68 @@ This guide explains how to use a pre-built Docker image to set up and deploy the
 ## General Steps (Common to both Windows/Ubuntu Users)
 1. **Pull the Docker Image**:
    ```
-   docker pull abxglia/speedrun-stylus-sepolia:0.1
+   docker pull abxglia/speedrun-stylus:0.1
    ```
 
 ## Steps for Users
 
 Before running the Docker container, make sure you have pulled the image and cloned the correct branch for your challenge.
 
+---
+
+1. **Run the Docker Container** (replace `<project-folder>` with your cloned project name, e.g., `counter`, `nft`, `vending_machine`, `stylus-uniswap-v2`, `multi-sig`):
+   - **Ubuntu:**
+     ```
+     docker run --name speedrun-stylus -it \
+         -v $(pwd):/app \
+         -p 3000:3000 \
+         abxglia/speedrun-stylus:0.1
+     ```
+   - **Windows (PowerShell):**
+     ```
+     docker run --name speedrun-stylus -it `
+         -v ${PWD}:/app `
+         -p 3000:3000 `
+         abxglia/speedrun-stylus:0.1
+     ```
+     Or as a single line:
+     ```
+     docker run --name speedrun-stylus -it -v ${PWD}:/app -p 3000:3000 abxglia/speedrun-stylus:0.1
+     ```
+
+<!-- 2. **Inside the Container**:
+   - (Contract deployment and frontend startup will be handled automatically inside the Docker container. Once deployed, the contract address and the frontend access link (e.g., http://localhost:3000) will be displayed in the container output. You do not need to run 'yarn run dev' yourself.) -->
+
+---
+
+
 > **Note:** When setting your private key in any .env file, append your private key with `0x` (e.g., `0xabc123...`).
 
-### 1. Set up environment variables (done inside the Docker container)
+### Set up environment variables (done inside the Docker container)
 
 #### For the Counter Challenge
 - In the container, navigate to `packages/nextjs`:
   ```
   cd packages/nextjs
+  ```
+  ```
   cp .env.example .env
   ```
 - Edit `.env` and set:
   ```
   NEXT_PUBLIC_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
+  ```
+  ```
   NEXT_PUBLIC_PRIVATE_KEY=0xYourPrivateKeyHere  # Append your private key with 0x (MetaMask private keys do not include it by default)
   ```
 - Then, navigate to `packages/stylus-demo`:
   ```
   cd ../stylus-demo
+  ```
+  ```
   touch .env
+  ```
+  ```
   echo "PRIVATE_KEY=0xYourPrivateKeyHere" > .env  # Append your private key with 0x (MetaMask private keys do not include it by default)
   ```
 
@@ -74,11 +110,15 @@ Before running the Docker container, make sure you have pulled the image and clo
 - In the container, navigate to `packages/nextjs`:
   ```
   cd packages/nextjs
+  ```
+  ```
   cp .env.example .env
   ```
 - Edit `.env` 
   ```
   NEXT_PUBLIC_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
+  ```
+  ```
   NEXT_PUBLIC_PRIVATE_KEY=0xYourPrivateKeyHere  # Append your private key with 0x (MetaMask private keys do not include it by default)
   ```
 - Then, navigate to the appropriate folder in `packages/cargo-stylus/` (replace `<challenge-folder>` with `nft`, `vending_machine`, `multi-sig`, or `stylus-uniswap-v2`):
@@ -90,36 +130,33 @@ Before running the Docker container, make sure you have pulled the image and clo
 
 ---
 
-> **Important:** Before running the Docker commands below, make sure you are in the **root directory** of your project (the folder where you cloned the repository). If you have previously navigated into a subdirectory (such as `packages/nextjs`, `packages/stylus-demo`, or any `cargo-stylus` folder), move back to the root directory using `cd ..` or the appropriate number of `cd ..` commands until you are at the project root. This ensures Docker mounts the correct folder.
+> **Important:** Before running the below given commands, make sure you are in the **root directory** of your project (the folder where you cloned the repository). If you have previously navigated into a subdirectory (such as `packages/nextjs`, `packages/stylus-demo`, or any `cargo-stylus` folder), move back to the root directory using `cd ..` or the appropriate number of `cd ..` commands until you are at the project root. This ensures Docker mounts the correct folder. 
+> OR 
+> You can open up a new terminal in the VS code and run this command : 
+>```
+> docker exec -it speedrun-stylus bash
+>```
 
----
+### ⚠️ Deploy the Contract (Required for All Users)
+- In the conainer terminal : 
+  ```
+     deploy-contract.sh <challenge-name>
+  ```
 
-1. **Run the Docker Container** (replace `<project-folder>` with your cloned project name, e.g., `counter`, `nft`, `vending_machine`, `stylus-uniswap-v2`, `multi-sig`):
-   - **Ubuntu:**
-     ```
-     docker run -it \
-         -v $(pwd):/app \
-         -p 3000:3000 \
-         abxglia/speedrun-stylus-sepolia:0.1 <project-folder>
-     ```
-   - **Windows (PowerShell):**
-     ```
-     docker run -it `
-         -v ${PWD}:/app `
-         -p 3000:3000 `
-         abxglia/speedrun-stylus-sepolia:0.1 counter
-     ```
-     Or as a single line:
-     ```
-     docker run -it -v ${PWD}:/app -p 3000:3000 abxglia/speedrun-stylus-sepolia:0.1 counter
-     ```
+  For example for counter challenge:
+  ```
+     deploy-contract.sh counter
+  ```
 
-Replace `<project-folder>` with the name of the folder you cloned for your challenge (e.g., `counter`, `nft`, `vending_machine`, `stylus-uniswap-v2`, `multi-sig`).
+  similarly for nft, vending_machine, multi-sig and stylus-uniswap-v2 challenges
 
-2. **Inside the Container**:
-   - (Contract deployment and frontend startup will be handled automatically inside the Docker container. Once deployed, the contract address and the frontend access link (e.g., http://localhost:3000) will be displayed in the container output. You do not need to run 'yarn run dev' yourself.)
+### Start the Frontend
+- In the container terminal:
+  ```
+  start-frontend.sh
+  ```
 
----
+> **Note:** The frontend will be accessible at `http://localhost:3000/`.
 
 ### ⚠️ Contract Address Setup (Required for All Users)
 Now **copy the contract address** from the bash terminal output. You will need to paste this address into the `contractAddress` variable in the `DebugContract` component. You will find the contract address in the Docker container's terminal once the contract has been successfully deployed, or in your terminal if you are using Docker Engine on Ubuntu.
@@ -137,6 +174,7 @@ Now **copy the contract address** from the bash terminal output. You will need t
 <p align="center"><em>Paste the copied contract address in the appropriate file as described above</em></p>
 
 ---
+
 
 ## ⚡️ Cache Your Deployed Contract for Faster, Cheaper Access
 
@@ -175,14 +213,32 @@ After you have completed the setup and are ready to submit your solution, follow
 
    - In your project directory, update the remote URL to your new repository:
      ```bash
-     git remote set-url origin https://github.com/yourusername/your-repo.git
+     git remote set-url origin https://YOUR_TOKEN@github.com/yourusername/your-repo.git
      ```
 
-3. **Push Your Code to GitHub**
+3. **Set your github username and email address:**
+   ```bash
+   git config user.name "yourusername"
+   ```
+   ```
+   git config user.email "youremail@example.com"
+   ```
+
+   Verify it by running this commands
+   ```
+   git config user.name
+   ```
+   ```
+   git config user.email
+   ```
+
+4. **Push Your Code to GitHub**
 
    - Add and commit any changes if you haven't already:
      ```bash
      git add .
+     ```
+     ```
      git commit -m "Initial commit for challenge submission"
      ```
    - Push your code:
