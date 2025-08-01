@@ -254,3 +254,7 @@ After you have completed the setup and are ready to submit your solution, follow
    - Use this link to submit your challenge as instructed.
 
 ---
+
+### Note : Make sure to delete the container before moving on to the next challenge as we can't have multiple containers with the same name. 
+
+![Delete Container](./assets/DeleteContainer.png)
