@@ -50,7 +50,7 @@ Before running the Docker container, make sure you have pulled the image and clo
 
 ---
 
-1. **Run the Docker Container** (replace `<project-folder>` with your cloned project name, e.g., `counter`, `nft`, `vending_machine`, `stylus-uniswap-v2`, `multi-sig`):
+1. **Run the Docker Container:**
    - **Ubuntu:**
      ```
      docker run --name speedrun-stylus -it \
