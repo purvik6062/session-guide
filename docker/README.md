@@ -55,10 +55,20 @@ This guide explains how to use a pre-built Docker image to set up and deploy the
 
 ## Step 2: General Steps (Common to both Windows/Ubuntu Users)
 
+**Before you begin, ensure your Docker Engine is running:**
+
+![Docker Engine Running](./assets/DockerEngineStatus.png)
+<p align="center"><em>Verify that "Engine running" is displayed in Docker Desktop's status bar</em></p>
+
 1. **Pull the Docker Image**:
    ```
    docker pull abxglia/speedrun-stylus:0.1
    ```
+
+**What to expect after pulling the Docker image:**
+
+![Docker Image Pulled](./assets/DockerImgSpeedrun.png)
+<p align="center"><em>Docker image successfully pulled and ready to use</em></p>
 
 Before running the Docker container, make sure you have pulled the image and cloned the correct branch for your challenge.
 
@@ -85,6 +95,19 @@ Before running the Docker container, make sure you have pulled the image and clo
   ```
   docker run --name speedrun-stylus -it -v ${PWD}:/app -p 3000:3000 abxglia/speedrun-stylus:0.1
   ```
+
+**What to expect after running the container:**
+
+![Docker Container Running](./assets/DockerContainerSpeedrun.png)
+<p align="center"><em>Docker container running successfully in Docker Desktop</em></p>
+
+> **Note:** Once the container is running, you'll see a terminal prompt inside the container where you can execute the commands for the next steps.
+
+> **Important:** If you are working on a new challenge and port 3000 is already in use by a previous container, you need to free up the port first. Open a new terminal and run:
+> ```
+> docker rm -f speedrun-stylus
+> ```
+> This will stop and remove the existing container, freeing up port 3000 for your new container to run.
 
 ---
 
