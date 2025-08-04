@@ -10,7 +10,22 @@
 - An Ethereum wallet with Arbitrum Sepolia testnet ETH (get from a faucet like [Arbitrum Sepolia Faucet](https://faucet.lamprosdao.com/)).
 - Your wallet's private key (prefixed with `0x`) for the `.env` file—**never commit this to Git or share publicly**.
 
-## Clone the Repository for Your Challenge
+## 📋 Quick Navigation
+
+- [Step 1: Clone the Repository for Your Challenge](#step-1-clone-the-repository-for-your-challenge)
+- [Step 2: General Steps](#step-2-general-steps-common-to-both-windowsubuntu-users)
+- [Step 3: Run the Docker Container](#step-3-run-the-docker-container)
+- [Step 4: Set up Environment Variables](#step-4-set-up-environment-variables-done-inside-the-docker-container)
+- [Step 5: Deploy the Contract](#step-5-deploy-the-contract-required-for-all-users)
+- [Step 6: Contract Address Setup](#step-6-contract-address-setup-required-for-all-users)
+- [Step 7: Start the Frontend](#step-7-start-the-frontend)
+- [Step 8: Submit Your Challenge](#step-8-submit-your-challenge)
+- [Step 9: Additional Submissions](#step-9-additional-submissions-2nd-and-3rd-time)
+
+---
+
+## Step 1: Clone the Repository for Your Challenge
+
 Choose the appropriate command below for your challenge:
 
 - **Counter Challenge:**
@@ -38,47 +53,49 @@ After cloning, open the project folder in Cursor IDE to continue with the setup.
 
 This guide explains how to use a pre-built Docker image to set up and deploy the Speedrun Stylus project to the Arbitrum Sepolia testnet. The Docker image includes all necessary dependencies (Node.js, Yarn, Rust with nightly toolchain and rust-src, cargo-stylus, Foundry, etc.), so you don't need to install them manually. This is tailored for deploying via `run-sepolia-deploy.sh` and running the frontend.
 
-## General Steps (Common to both Windows/Ubuntu Users)
+## Step 2: General Steps (Common to both Windows/Ubuntu Users)
+
 1. **Pull the Docker Image**:
    ```
    docker pull abxglia/speedrun-stylus:0.1
    ```
 
-## Steps for Users
-
 Before running the Docker container, make sure you have pulled the image and cloned the correct branch for your challenge.
 
 ---
 
-1. **Run the Docker Container:**
-   - **Ubuntu:**
-     ```
-     docker run --name speedrun-stylus -it \
-         -v $(pwd):/app \
-         -p 3000:3000 \
-         abxglia/speedrun-stylus:0.1
-     ```
-   - **Windows (PowerShell):**
-     ```
-     docker run --name speedrun-stylus -it `
-         -v ${PWD}:/app `
-         -p 3000:3000 `
-         abxglia/speedrun-stylus:0.1
-     ```
-     Or as a single line:
-     ```
-     docker run --name speedrun-stylus -it -v ${PWD}:/app -p 3000:3000 abxglia/speedrun-stylus:0.1
-     ```
+## Step 3: Run the Docker Container
 
-<!-- 2. **Inside the Container**:
-   - (Contract deployment and frontend startup will be handled automatically inside the Docker container. Once deployed, the contract address and the frontend access link (e.g., http://localhost:3000) will be displayed in the container output. You do not need to run 'yarn run dev' yourself.) -->
+**Run the Docker Container:**
+- **Ubuntu:**
+  ```
+  docker run --name speedrun-stylus -it \
+      -v $(pwd):/app \
+      -p 3000:3000 \
+      abxglia/speedrun-stylus:0.1
+  ```
+- **Windows (PowerShell):**
+  ```
+  docker run --name speedrun-stylus -it `
+      -v ${PWD}:/app `
+      -p 3000:3000 `
+      abxglia/speedrun-stylus:0.1
+  ```
+  Or as a single line:
+  ```
+  docker run --name speedrun-stylus -it -v ${PWD}:/app -p 3000:3000 abxglia/speedrun-stylus:0.1
+  ```
 
 ---
 
 
 > **Note:** When setting your private key in any .env file, append your private key with `0x` (e.g., `0xabc123...`).
 
-### Set up environment variables (done inside the Docker container)
+## Step 4: Set up Environment Variables (done inside the Docker container)
+
+---
+
+### 🔢 **COUNTER CHALLENGE ONLY**
 
 #### For the Counter Challenge
 - In the container, navigate to `packages/nextjs`:
@@ -102,9 +119,14 @@ Before running the Docker container, make sure you have pulled the image and clo
   ```
   touch .env
   ```
+  > **Note:** If the `touch .env` command fails, you can create the `.env` file manually in your IDE by navigating to the `packages/stylus-demo` folder and creating a new file named `.env`.
   ```
   echo "PRIVATE_KEY=0xYourPrivateKeyHere" > .env  # Append your private key with 0x (MetaMask private keys do not include it by default)
   ```
+
+---
+
+### 🎨 **NFT, VENDING MACHINE, MULTISIG, AND UNISWAP CHALLENGES**
 
 #### For NFT, Vending Machine, Multisig, and Uniswap Challenges
 - In the container, navigate to `packages/nextjs`:
@@ -125,8 +147,13 @@ Before running the Docker container, make sure you have pulled the image and clo
   ```
   cd ../cargo-stylus/<challenge-folder>
   touch .env
+  ```
+  > **Note:** If the `touch .env` command fails, you can create the `.env` file manually in your IDE by navigating to the appropriate `packages/cargo-stylus/<challenge-folder>` folder and creating a new file named `.env`.
+  ```
   echo "PRIVATE_KEY=0xYourPrivateKeyHere" > .env  # Append your private key with 0x (MetaMask private keys do not include it by default)
   ```
+
+---
 
 ---
 
@@ -137,28 +164,40 @@ Before running the Docker container, make sure you have pulled the image and clo
 > docker exec -it speedrun-stylus bash
 >```
 
-### ⚠️ Deploy the Contract (Required for All Users)
-- In the conainer terminal : 
+## Step 5: Deploy the Contract (Required for All Users)
+
+⚠️ **Deploy the Contract (Required for All Users)**
+- In the container terminal : 
   ```
      deploy-contract.sh <challenge-name>
   ```
 
-  For example for counter challenge:
-  ```
-     deploy-contract.sh counter
-  ```
+  **Replace `<challenge-name>` with your specific challenge:**
 
-  similarly for nft, vending_machine, multi-sig and stylus-uniswap-v2 challenges
+  - **For Counter Challenge:**
+    ```
+    deploy-contract.sh counter
+    ```
+  - **For NFT Challenge:**
+    ```
+    deploy-contract.sh nft
+    ```
+  - **For Vending Machine Challenge:**
+    ```
+    deploy-contract.sh vending_machine
+    ```
+  - **For Multisig Wallet Challenge:**
+    ```
+    deploy-contract.sh multi-sig
+    ```
+  - **For Uniswap V2 Challenge:**
+    ```
+    deploy-contract.sh stylus-uniswap-v2
+    ```
 
-### Start the Frontend
-- In the container terminal:
-  ```
-  start-frontend.sh
-  ```
+## Step 6: Contract Address Setup (Required for All Users)
 
-> **Note:** The frontend will be accessible at `http://localhost:3000/`.
-
-### ⚠️ Contract Address Setup (Required for All Users)
+⚠️ **Contract Address Setup (Required for All Users)**
 Now **copy the contract address** from the bash terminal output. You will need to paste this address into the `contractAddress` variable in the `DebugContract` component. You will find the contract address in the Docker container's terminal once the contract has been successfully deployed, or in your terminal if you are using Docker Engine on Ubuntu.
 
 > 💡 **Note:** This step is required for both Ubuntu and Windows users, and for all Speedrun challenges—always update the contract address in `DebugContracts.tsx` after deployment.
@@ -175,33 +214,19 @@ Now **copy the contract address** from the bash terminal output. You will need t
 
 ---
 
+## Step 7: Start the Frontend
 
-## ⚡️ Cache Your Deployed Contract for Faster, Cheaper Access
+**Start the Frontend**
+- In the container terminal:
+  ```
+  start-frontend.sh
+  ```
 
-> **This is a necessary step before pushing your code to GitHub. Please make sure to cache your deployed contract as described below before proceeding to the submission steps.**
-
-> 📖 Contracts deployed on Arbitrum Sepolia can use this command for gas benefits, time savings, and cheaper contract function calls. Our backend will benchmark and place bids on your behalf to ensure your contract is not evicted from the CacheManager contract, fully automating this process for you.
-
-Before caching your contract, make sure you have installed the Smart Cache CLI globally:
-
-```bash
-npm install -g smart-cache-cli
-```
-
-> 💡 **Info:** Both the `<address>` and `--deployed-by` flags are **mandatory** when adding a contract to the cache. The wallet address for `--deployed-by` should be the one whose private key you added in `packages/nextjs/.env`.
-
-### 📝 Simple Example
-
-```bash
-smart-cache add <CONTRACT_ADDRESS> --deployed-by <YOUR_WALLET_ADDRESS_WITH_WHOM_YOU_HAVE_DEPLOYED_CONTRACT>
-```
-
-![Smart Cache Add Command Example](./assets/Smart_Cache_Add_Command.png)
-<p align="center"><em>This is what you should see in your terminal if the smart-cache add command works successfully.</em></p>
+> **Note:** The frontend will be accessible at `http://localhost:3000/`.
 
 ---
 
-## 🚀 Submitting Your Challenge
+## Step 8: Submit Your Challenge
 
 After you have completed the setup and are ready to submit your solution, follow these steps:
 
@@ -253,6 +278,13 @@ After you have completed the setup and are ready to submit your solution, follow
      ```
    - Use this link to submit your challenge as instructed.
 
+---
+
+## Step 9: Additional Submissions (2nd and 3rd Time)
+
+After your first submission, you need to submit the same challenge **2 more times** on the speedrun platform. For these additional submissions, you need to follow the **Smart Cache Script** steps mentioned in the [rust-crate-and-toml-guide README](https://github.com/purvik6062/session-guide/blob/main/rust-crate-and-toml-guide/README.md).
+
+> **Important**: These additional steps are necessary to complete the full speedrun challenge requirements and demonstrate your understanding of smart caching optimization.
 ---
 
 ### Note : Make sure to delete the container before moving on to the next challenge as we can't have multiple containers with the same name. 

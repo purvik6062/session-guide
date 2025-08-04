@@ -2,14 +2,76 @@
 
 ## Setup Instructions
 
-### 1. Repository Setup
+### 1. Initialize Smart Cache
+
+**Important Note**: From step 1 onwards, make sure to run all commands in a new terminal using PowerShell or bash (not WSL).
+
+In that same challenge's code in your IDE, open a new terminal and navigate to the `speedrun_stylus` directory:
+
+```bash
+cd speedrun_stylus
+```
+
+Then run:
+```bash
+npm unlink -g smart-cache-cli
+```
+
+If you have installed smart-cache previously, then run:
+```bash
+npm install -g smart-cache-cli
+```
+
+Then run:
+```bash
+smart-cache init
+```
+
+This will create a new `smartcache.toml` file.
+
+> **Important Note**: After running `smart-cache init`, you can see the newly created `smartcache.toml` file by clicking on the Ctrl+click link that is generated in your terminal. This will open the file directly in your IDE.
+> 
+> **Important**: The `smartcache.toml` file must be created inside the `speedrun_stylus` directory only. Make sure you are in the correct directory before running the `smart-cache init` command.
+
+### 2. Configure Smart Cache
+
+In the `smart-cache.toml` file, add:
+- The contract address which you just deployed on Arbitrum Sepolia
+- The deployed address of the private key which you used to deploy the contract on Arbitrum Sepolia
+
+### 3. Add Contract to Cache
+
+Run the command:
+```bash
+smart-cache add
+```
+
+This command will be running in your terminal and the contract will be cached to optimize gas usage.
+
+### 4. Final Submission
+
+Push your changed code to your GitHub repository again and then submit that repository again in the speedrun challenges.
+
+---
+
+## 🎉 Congratulations!
+
+**You have successfully completed your speedrun challenge again using Smart Cache!** 
+
+Now you will be guided through the process of submitting your challenge **one more time** using the **Rust Crate** approach. This will be your final submission to complete all requirements for the speedrun challenge.
+
+**Next Steps**: Follow the instructions below (Steps 5-10) to prepare your final submission using the Rust Crate method.
+
+---
+
+### 5. Repository Setup
 
 The first step is to get the repository code that you have already submitted for the speedrun challenges. 
 
 - **If you have not deleted that repo**: Open it in your Cursor or VSCode IDE
 - **If you have deleted the repo**: Create anew folder, open it in Cursor and Clone your published repository from your GitHub that you submitted for the speedrun challenges
 
-### 2. Directory Navigation
+### 6. Directory Navigation
 
 **Important Note**: All commands including cd commands must be run in WSL (Windows Subsystem for Linux) only. If you're on Windows, make sure to use WSL terminal for all operations.
 
@@ -32,7 +94,7 @@ cd speedrun_stylus/packages/cargo-stylus/vending_machine
 
 **Note**: In short, you have to find `rust-toolchain.toml` and `cd` into the folder structure until you get the `rust-toolchain.toml` file.
 
-### 3. Install Dependencies and Add Cache Functionality
+### 7. Install Dependencies and Add Cache Functionality
 
 **Important Note**: All cargo commands must be run in WSL (Windows Subsystem for Linux) only. If you're on Windows, make sure to use WSL terminal for all cargo operations.
 
@@ -43,27 +105,37 @@ cargo add stylus-cache-sdk
 
 Then add the following code in your `lib.rs` file:
 
+**Step 1**: Add the import statement at the top of your file (just like how we do imports in Node.js):
+
 ```rust
 use stylus_cache_sdk::{is_contract_cacheable};
+```
 
+**Step 2**: In your implementation block (`impl` block), add the `is_cacheable` function anywhere within that block:
+
+```rust
 #[public]
 impl Counter {
+    // ... your existing functions ...
+    
     pub fn is_cacheable(&self) -> bool {
         is_contract_cacheable()
     }
+    
+    // ... your existing functions ...
 }
 ```
 
 **Important**: Just like this example, in the `impl` block of your contract, you must include the `is_cacheable` function. Make sure that the function must be exactly like this.
 
-### 4. Make Your Contract Unique
+### 8. Make Your Contract Unique
 
 Change the name of any function in your contract to make it unique. For example, if you are working on the counter challenge, in the `impl Counter` block you will have all the defined functions. Change the function name like this:
 
 - If the function name is `set_number`, change it to `set_number_meet`
 - Simply append your name so that the contract can be unique for everyone
 
-### 5. Deploy Your Contract
+### 9. Deploy Your Contract
 
 Run the following command in WSL only (if you are on Windows):
 
@@ -78,47 +150,28 @@ rustup target add wasm32-unknown-unknown
 
 Then run the `cargo stylus deploy` command again.
 
-### 6. Commit and Submit
+### 10. Commit and Submit
 
 Commit your changes, push them to your repository, and make sure to submit that same repository again on [https://www.speedrunstylus.com/](https://www.speedrunstylus.com/) for the challenge you were working on (e.g., if the `lib.rs` was for counter contract, then submit your modified code for counter repo again in the speedrun).
 
-### 7. Initialize Smart Cache
+---
 
-**Important Note**: From step 7 onwards, make sure to run all commands in a new terminal using PowerShell or bash (not WSL).
+## 🏆 Final Congratulations!
 
-In that same challenge's code in your IDE, open a new terminal and run:
+**You have successfully completed your speedrun challenge submission in all three required ways:**
 
-```bash
-npm unlink -g smart-cache-cli
-```
+### 1. **Initial Submission on Arbitrum Sepolia**
+   - Deployed your contract directly on Arbitrum Sepolia testnet
+   - Used the Docker setup and frontend interface
 
-If you have installed smart-cache previously, then run:
-```bash
-npm install -g smart-cache-cli
-```
+### 2. **Smart Cache Configuration Submission**
+   - Used the `smartcache.toml` config file approach
+   - Implemented manual caching with CLI commands
+   - Optimized gas usage through smart cache configuration
 
-Then run:
-```bash
-smart-cache init
-```
+### 3. **Rust Crate Automated Caching Submission**
+   - Deployed on Arbitrum Sepolia with automated caching
+   - Used `stylus-cache-sdk` crate for automatic cache optimization
+   - No need for manual smart cache config or CLI commands
 
-This will create a new `smartcache.toml` file.
-
-### 8. Configure Smart Cache
-
-In the `smart-cache.toml` file, add:
-- The contract address which you just deployed on Arbitrum Sepolia
-- The deployed address of the private key which you used to deploy the contract on Arbitrum Sepolia
-
-### 9. Add Contract to Cache
-
-Run the command:
-```bash
-smart-cache add
-```
-
-This command will be running in your terminal and the contract will be cached to optimize gas usage.
-
-### 10. Final Submission
-
-Push your changed code to your GitHub repository again and then submit that repository again in the speedrun challenges.
+**🎉 You have now mastered all three approaches to deploying and optimizing Stylus contracts on Arbitrum Sepolia!**
