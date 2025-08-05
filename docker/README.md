@@ -76,6 +76,10 @@ Before running the Docker container, make sure you have pulled the image and clo
 
 ## Step 3: Run the Docker Container
 
+> **⚠️ IMPORTANT:** Before running this container, ensure that:
+> - **Docker Desktop is running** (if using Windows/macOS)
+> - **Docker Engine is running** (verify this in Docker Desktop's status bar - you should see "Engine running")
+
 **Run the Docker Container:**
 - **Ubuntu:**
   ```
@@ -103,13 +107,32 @@ Before running the Docker container, make sure you have pulled the image and clo
 
 > **Note:** Once the container is running, you'll see a terminal prompt inside the container where you can execute the commands for the next steps.
 
+---
+
+## ⚠️ **MANDATORY STEP: Run Yarn Install**
+
+**🚨 THIS STEP IS REQUIRED - DO NOT SKIP!**
+
+After the container is running and you see the terminal prompt inside the container, you **MUST** run the following command:
+
+```bash
+yarn install
+```
+
+**What to expect when running yarn install:**
+
+![Yarn Install Guide](./assets/yarn_install_guide.png)
+<p align="center"><em>Terminal output showing the yarn install process and available commands inside the Docker container</em></p>
+
+> **⚠️ Important:** This step installs all necessary dependencies for your project. Without running `yarn install`, the subsequent steps will fail. Make sure you see the installation complete successfully before proceeding to the next steps.
+
+---
+
 > **Important:** If you are working on a new challenge and port 3000 is already in use by a previous container, you need to free up the port first. Open a new terminal and run:
 > ```
 > docker rm -f speedrun-stylus
 > ```
 > This will stop and remove the existing container, freeing up port 3000 for your new container to run.
-
----
 
 
 > **Note:** When setting your private key in any .env file, append your private key with `0x` (e.g., `0xabc123...`).
