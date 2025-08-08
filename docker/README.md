@@ -124,6 +124,8 @@ yarn install
 ![Yarn Install Guide](./assets/yarn_install_guide.png)
 <p align="center"><em>Terminal output showing the yarn install process and available commands inside the Docker container</em></p>
 
+## Step 4: Set up Environment Variables (done inside the Docker container)
+
 > **⚠️ Important:** This step installs all necessary dependencies for your project. Without running `yarn install`, the subsequent steps will fail. Make sure you see the installation complete successfully before proceeding to the next steps.
 
 ---
@@ -136,8 +138,6 @@ yarn install
 
 
 > **Note:** When setting your private key in any .env file, append your private key with `0x` (e.g., `0xabc123...`).
-
-## Step 4: Set up Environment Variables (done inside the Docker container)
 
 ---
 
