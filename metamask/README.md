@@ -32,11 +32,12 @@ Note: Never share your Secret Recovery Phrase (SRP) or private keys. Anyone with
 
    ![Create password](./assets/create_password.png)
 
-7. Read the security guidance and continue to reveal your Secret Recovery Phrase (SRP) by clicking the Continue button.
+7. Read the security guidance and continue to reveal your Secret Recovery Phrase (SRP) by clicking the Get started button.
 
    ![Secure your wallet](./assets/secure_wallet.png)
 
 8. Click on Continue with Secret Recovery Phrase button.
+
    ![Continue with SRP](./assets/continue_with_srp.png)
 
 9. Reveal the SRP and store it offline in a safe place by clicking on "Tap to reveal" text. Do not share it with anyone. You can take a screenshot/picture of the SRP to store it offline or else you can write it down on a piece of paper.
@@ -102,21 +103,21 @@ You can add the network inside MetaMask. Follow the prompts to add Arbitrum Sepo
 
 ## 4) Claim Test ETH on Arbitrum Sepolia (Faucet)
 
-Use a reputable faucet that supports Arbitrum Sepolia. Typical steps are shown below.
+Go to the Lampros DAO Faucet website - [Lampros DAO Faucet](https://faucet.lamprosdao.com/)
 
 1. Open the faucet website and click on the "Connect Wallet" button.
 
    ![Connect Wallet](./assets/connect_wallet.png)
 
-2. Select the "MetaMask" option from the dropdown menu.
+2. Select the "MetaMask" option.
 
    ![Select MetaMask](./assets/choose_metamask_as_option.png)
 
-3. Approve the account connection in MetaMask when it prompts.
+3. Approve the account connection in MetaMask when it prompts by clicking on the Connect button.
 
     ![Connect account](./assets/connect_account.png)
 
-4. Join the Speedrun Stylus telegram channel to get the latest updates and help and then click on the "Next" button.
+4. Join the Speedrun Stylus telegram channel to get the latest updates and then click on the "Next" button.
 
     ![Join Telegram](./assets/click_next.png)
 
@@ -124,11 +125,11 @@ Use a reputable faucet that supports Arbitrum Sepolia. Typical steps are shown b
 
    ![Complete CAPTCHA](./assets/complete_captcha.png)
 
-6. Click the "Claim 0.01 ETH" button for to get 0.01 ETH.
+6. Click the "Claim 0.01 ETH" button to get 0.01 ETH.
 
    ![Claim ETH](./assets/claim_eth.png)
 
-7. After a successful request, you should see a confirmation.
+7. After a successful request, you should see a confirmation as "Transaction Successful".
 
    ![Claim success](./assets/claim_success.png)
 
