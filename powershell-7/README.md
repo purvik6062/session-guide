@@ -62,17 +62,25 @@ Windows Package Manager (winget) is a command-line tool that helps you discover,
 3. **Follow the installation wizard**
    - Accept the license agreement
    - Choose installation location (default is recommended)
-   - Select additional options:
-     - ✅ **Add PowerShell to PATH environment variable**
-     - ✅ **Register Windows Event Logging manifest**
-     - ✅ **Enable PowerShell remoting** (if needed)
+   - **Select additional options:**
+
+   **✅ Must have**
+   - ✅ **Add PowerShell to PATH environment variable** → lets you run `pwsh` in any terminal or from Win + R
+   - ✅ **Register Windows Event Logging manifest** → keeps proper logging support
+
+   **💡 Highly recommended for developers**
+   - ✅ **Add 'Open here' context menus to Explorer** → right-click a folder → instantly open PowerShell 7 in that location (saves tons of time)
+   - ✅ **Add 'Run with PowerShell 7' context menu for PowerShell files** → right-click .ps1 → run without opening terminal manually
+
+   **🛑 Leave unchecked unless needed**
+   - ⬜ **Enable PowerShell remoting** → only if you're doing remote machine automation
+   - ⬜ **Disable telemetry** → optional; you can check it if you prefer privacy, has no effect on functionality
 
 4. **Complete installation**
    - Click "Install" and wait for completion
    - Click "Finish" when done
 
-
-## Post-Installatio
+## Post-Installation
 
 ### Verify Installation
 
