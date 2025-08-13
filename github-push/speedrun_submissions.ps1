@@ -241,12 +241,25 @@ if ($commitMessage) {
 
 # 7) Push from inside container
 Say "🚀 Pushing to origin '$branch'..."
-docker exec $NAME bash -c "cd '$repoPath' && git push -u origin '$branch'"
-if ($LASTEXITCODE -eq 0) {
+$pushOutput = docker exec $NAME bash -c "cd '$repoPath' && git push -u origin '$branch'" 2>&1
+$pushSuccess = ($LASTEXITCODE -eq 0)
+
+if ($pushSuccess) {
   Say "✅ Push complete. Your repository should be updated."
 } else {
-  Write-Host "❌ Push failed. Check your PAT scopes and repository permissions."
-  exit 1
+  Write-Host "❌ Push failed. Error details:" -ForegroundColor Red
+  Write-Host $pushOutput -ForegroundColor Yellow
+  Write-Host "Common causes:" -ForegroundColor Yellow
+  Write-Host "   - Invalid PAT token or insufficient permissions" -ForegroundColor Yellow
+  Write-Host "   - Repository doesn't exist or you don't have write access" -ForegroundColor Yellow
+  Write-Host "   - Branch protection rules preventing push" -ForegroundColor Yellow
+  
+  $continueAfterPushError = Read-Host "Push failed. Would you like to continue with the next steps (Smart Cache configuration)? (Y/N)"
+  if ($continueAfterPushError -ne "Y" -and $continueAfterPushError -ne "y") {
+    Say "⏭️ Script terminated by user choice. You can fix the push issue and run the script again."
+    exit 0
+  }
+  Say "⏭️ Continuing with next steps despite push failure..."
 }
 
 # 8) Smart Cache Configuration (Optional)
@@ -386,18 +399,34 @@ fi
       Say "⚠️ Smart-cache add command had errors after $retryCount attempts"
       $continuePush = Read-Host "Are you sure to push the code to GitHub without successful run of smart-cache add command? (Y/N)"
       if ($continuePush -ne "Y" -and $continuePush -ne "y") {
-        Say "⏭️ Skipping push. You can run smart-cache add manually and push later."
-        return
+        Say "⏭️ Skipping smart cache push due to smart-cache add errors."
+        $continueToRustCrate = Read-Host "Would you like to continue with Rust Crate automation? (Y/N)"
+        if ($continueToRustCrate -ne "Y" -and $continueToRustCrate -ne "y") {
+          Say "⏭️ Script completed. Smart cache is configured but not pushed due to errors."
+          exit 0
+        }
+        Say "⏭️ Continuing with Rust Crate automation..."
       }
     }
     
     # Push the new changes
     Say "🚀 Pushing smart cache configuration to GitHub..."
-    docker exec $NAME bash -c "cd '$repoPath' && git push origin '$branch'"
-    if ($LASTEXITCODE -eq 0) {
+    $smartCachePushOutput = docker exec $NAME bash -c "cd '$repoPath' && git push origin '$branch'" 2>&1
+    $smartCachePushSuccess = ($LASTEXITCODE -eq 0)
+    
+    if ($smartCachePushSuccess) {
       Say "✅ Smart cache configuration pushed to GitHub successfully!"
     } else {
-      Write-Host "❌ Failed to push smart cache configuration. You can push manually later."
+      Write-Host "❌ Failed to push smart cache configuration. Error details:" -ForegroundColor Red
+      Write-Host $smartCachePushOutput -ForegroundColor Yellow
+      Write-Host "⚠️ You can push manually later or continue with the next steps." -ForegroundColor Yellow
+      
+      $continueAfterSmartCachePushError = Read-Host "Smart cache push failed. Would you like to continue with Rust Crate automation? (Y/N)"
+      if ($continueAfterSmartCachePushError -ne "Y" -and $continueAfterSmartCachePushError -ne "y") {
+        Say "⏭️ Script completed. Smart cache is configured but not pushed to GitHub."
+        exit 0
+      }
+      Say "⏭️ Continuing with Rust Crate automation despite push failure..."
     }
   } else {
     Say "⏭️ Smart cache configuration created but not committed. You can commit manually later."
@@ -545,8 +574,12 @@ fi
         Write-Host "Error code: $LASTEXITCODE" -ForegroundColor Yellow
         $continuePushAfterDeploy = Read-Host "Do you want to push the code to GitHub despite deployment errors? (Y/N)"
         if ($continuePushAfterDeploy -ne "Y" -and $continuePushAfterDeploy -ne "y") {
-          Say "⏭️ Skipping push due to deployment errors. You can deploy and push manually later."
-          return
+          Say "⏭️ Skipping push due to deployment errors. Rust crate automation is complete locally."
+          Say "🎉 Local Rust automation complete! You can deploy and push manually later."
+          Write-Host "   ✅ Stylus cache SDK integration (local)"
+          Write-Host "   ✅ Contract code updated (local)"
+          Write-Host "   ⚠️ Manual deployment and push required"
+          exit 0
         }
       }
       
@@ -558,15 +591,24 @@ fi
         
         # Push the Rust changes
         Say "🚀 Pushing Rust crate automation to GitHub..."
-        docker exec $NAME bash -c "cd '$repoPath' && git push origin '$branch'"
-        if ($LASTEXITCODE -eq 0) {
+        $rustPushOutput = docker exec $NAME bash -c "cd '$repoPath' && git push origin '$branch'" 2>&1
+        $rustPushSuccess = ($LASTEXITCODE -eq 0)
+        
+        if ($rustPushSuccess) {
           Say "✅ Rust crate automation pushed to GitHub successfully!"
           Say "🎉 All automation complete! Your contract now includes:"
           Write-Host "   ✅ Smart cache configuration"
           Write-Host "   ✅ Stylus cache SDK integration"
           Write-Host "   ✅ Optimized contract functions"
         } else {
-          Write-Host "❌ Failed to push Rust changes. You can push manually later." -ForegroundColor Red
+          Write-Host "❌ Failed to push Rust changes. Error details:" -ForegroundColor Red
+          Write-Host $rustPushOutput -ForegroundColor Yellow
+          Write-Host "⚠️ All configurations are complete locally. You can push manually later." -ForegroundColor Yellow
+          Say "🎉 Local automation complete! Your contract now includes:"
+          Write-Host "   ✅ Smart cache configuration (local)"
+          Write-Host "   ✅ Stylus cache SDK integration (local)"
+          Write-Host "   ✅ Optimized contract functions (local)"
+          Write-Host "   ⚠️ Manual push required to sync with GitHub"
         }
       } else {
         Say "⏭️ Rust changes created but not committed. You can commit manually later."
