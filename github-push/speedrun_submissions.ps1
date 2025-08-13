@@ -189,6 +189,15 @@ $gitUserEmail = Read-Host "Enter your git user.email (e.g., you@example.com)"
 if (-not $gitUserName) { Write-Host "❌ user.name cannot be empty."; exit 1 }
 if (-not $gitUserEmail) { Write-Host "❌ user.email cannot be empty."; exit 1 }
 
+# Collect private key for later use in smart cache and deployment
+Say "🔐 Enter your wallet private key for smart cache and deployment operations"
+$securePrivateKey = Read-Host -AsSecureString "Private Key (will not be displayed)"
+$userPrivateKey = Get-PlainTextFromSecureString $securePrivateKey
+if (-not $userPrivateKey) { Write-Host "❌ Private key cannot be empty."; exit 1 }
+if (-not $userPrivateKey.StartsWith("0x")) {
+  $userPrivateKey = "0x" + $userPrivateKey
+}
+
 $branch = Select-ChallengeBranch
 
 # 2) Find the repository path inside container
@@ -246,20 +255,27 @@ $configureSmartCache = Read-Host "Are you ready for smart cache configuration fo
 if ($configureSmartCache -eq "Y" -or $configureSmartCache -eq "y") {
   Say "🔧 Setting up Smart Cache for gas optimization..."
   
-  # Install smart-cache-cli globally
-  Say "📦 Installing smart-cache-cli..."
-  $installResult = docker exec $NAME bash -c "npm install -g smart-cache-cli" 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    Say "⚠️ Global installation failed. Trying local installation..."
-    docker exec $NAME bash -c "cd '$repoPath' && npm install smart-cache-cli" | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-      Say "✅ Smart-cache-cli installed locally in project"
-    } else {
-      Write-Host "❌ Failed to install smart-cache-cli. You may need to install it manually." -ForegroundColor Red
-      Write-Host "   Run: docker exec -it $NAME bash -c 'npm install -g smart-cache-cli'" -ForegroundColor Yellow
-    }
+  # Check if smart-cache-cli is already installed
+  Say "🔍 Checking if smart-cache-cli is already installed..."
+  docker exec $NAME bash -c "smart-cache --help" > $null 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    Say "✅ Smart-cache-cli is already installed, skipping installation"
   } else {
-    Say "✅ Smart-cache-cli installed globally"
+    # Install smart-cache-cli globally
+    Say "📦 Installing smart-cache-cli..."
+    $installResult = docker exec $NAME bash -c "npm install -g smart-cache-cli" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+      Say "⚠️ Global installation failed. Trying local installation..."
+      docker exec $NAME bash -c "cd '$repoPath' && npm install smart-cache-cli" | Out-Null
+      if ($LASTEXITCODE -eq 0) {
+        Say "✅ Smart-cache-cli installed locally in project"
+      } else {
+        Write-Host "❌ Failed to install smart-cache-cli. You may need to install it manually." -ForegroundColor Red
+        Write-Host "   Run: docker exec -it $NAME bash -c 'npm install -g smart-cache-cli'" -ForegroundColor Yellow
+      }
+    } else {
+      Say "✅ Smart-cache-cli installed globally"
+    }
   }
   
   # Run smart-cache init
@@ -267,6 +283,7 @@ if ($configureSmartCache -eq "Y" -or $configureSmartCache -eq "y") {
   docker exec $NAME bash -c "cd '$repoPath' && npx smart-cache init" | Out-Null
   
   # Get user inputs for smart cache configuration
+  Say "💡 Using the private key you provided earlier for wallet operations"
   $deployerAddress = Get-SmartInput "Enter your wallet address that deployed the contracts: "
   $contractAddress = Get-SmartInput "Enter your contract address (or press Enter to skip): " -allowEmpty $true
   
@@ -480,6 +497,57 @@ fi
         Write-Host "📝 The file is located at: $libRsPath"
         Write-Host "⏸️  Press Enter when you're done making changes..."
         Read-Host
+      }
+      
+      # Ensure WebAssembly target is installed
+      Say "🔧 Ensuring WebAssembly target is installed..."
+      docker exec $NAME bash -c "rustup target add wasm32-unknown-unknown" | Out-Null
+      if ($LASTEXITCODE -eq 0) {
+        Say "✅ WebAssembly target ready"
+      } else {
+        Write-Host "⚠️ Warning: Could not install wasm32-unknown-unknown target" -ForegroundColor Yellow
+      }
+      
+      # Deploy contract with cargo stylus
+      Say "🚀 Deploying contract with cargo stylus..."
+      Write-Host "Running: cargo stylus deploy --endpoint='https://sepolia-rollup.arbitrum.io/rpc' --private-key=<your-key> --no-verify"
+      
+      # Use the private key collected at the beginning of the script
+      $deployOutput = docker exec $NAME bash -c "cd '$cargoDir' && cargo stylus deploy --endpoint='https://sepolia-rollup.arbitrum.io/rpc' --private-key='$userPrivateKey' --no-verify" 2>&1
+      $deploySuccess = ($LASTEXITCODE -eq 0)
+      
+      # Display deploy output
+      Write-Host "📋 Cargo stylus deploy output:" -ForegroundColor Cyan
+      Write-Host $deployOutput
+      
+      if ($deploySuccess) {
+        # Extract contract address from deployment output
+        $contractAddressMatch = $deployOutput | Select-String -Pattern "deployed code at address (0x[0-9a-fA-F]{40})" -AllMatches
+        if (-not $contractAddressMatch) {
+          # Try alternative patterns that might be in the output
+          $contractAddressMatch = $deployOutput | Select-String -Pattern "(0x[0-9a-fA-F]{40})" -AllMatches | Select-Object -Last 1
+        }
+        
+        if ($contractAddressMatch) {
+          $deployedContractAddress = $contractAddressMatch.Matches[0].Groups[1].Value
+          if (-not $deployedContractAddress) {
+            $deployedContractAddress = $contractAddressMatch.Matches[0].Value
+          }
+          Say "✅ Contract deployed successfully!"
+          Write-Host "🎯 Contract Address: $deployedContractAddress" -ForegroundColor Green
+          Write-Host "📋 Save this address - you'll need it for interacting with your contract!" -ForegroundColor Yellow
+        } else {
+          Say "✅ Contract deployed successfully!"
+          Write-Host "⚠️ Could not extract contract address from output. Check the deployment log above." -ForegroundColor Yellow
+        }
+      } else {
+        Say "⚠️ Contract deployment encountered errors"
+        Write-Host "Error code: $LASTEXITCODE" -ForegroundColor Yellow
+        $continuePushAfterDeploy = Read-Host "Do you want to push the code to GitHub despite deployment errors? (Y/N)"
+        if ($continuePushAfterDeploy -ne "Y" -and $continuePushAfterDeploy -ne "y") {
+          Say "⏭️ Skipping push due to deployment errors. You can deploy and push manually later."
+          return
+        }
       }
       
       # Commit and push Rust changes
