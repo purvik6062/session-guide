@@ -34,10 +34,27 @@ You have:
    - Click **"Generate new token"** → **"Generate new token (classic)"**
    - Give it a name: `"My Project Push Token"`
    - Set expiration (recommended: 90 days)
-3. **Select Required Permissions**
+3. **Select Permissions (enable all below)**
 
-   - ✅ **repo** - Full control of private repositories
-   - ✅ **workflow** - Update GitHub Action workflows (if needed)
+   - Select all the permissions listed below when generating the token
+   - ✅ **Repo (all)**: `repo`, `repo:status`, `repo_deployment`, `public_repo`, `repo:invite`, `security_events`
+   - ✅ **Workflow**: `workflow`
+   - ✅ **Packages**: `write:packages`, `read:packages`, `delete:packages`
+   - ✅ **Organization**: `admin:org`, `write:org`, `read:org`, `manage_runners:org`
+   - ✅ **Public keys**: `admin:public_key`, `write:public_key`, `read:public_key`
+   - ✅ **Repository hooks**: `admin:repo_hook`, `write:repo_hook`, `read:repo_hook`
+   - ✅ **Organization hooks**: `admin:org_hook`
+   - ✅ **Gists & notifications**: `gist`, `notifications`
+   - ✅ **User**: `user`, `read:user`, `user:email`, `user:follow`
+   - ✅ **Repository management**: `delete_repo`
+   - ✅ **Discussions**: `write:discussion`, `read:discussion`
+   - ✅ **Enterprise**: `admin:enterprise`, `manage_runners:enterprise`, `manage_billing:enterprise`, `read:enterprise`, `scim:enterprise`, `audit_log`, `read:audit_log`
+   - ✅ **Codespaces**: `codespace`, `codespace:secrets`
+   - ✅ **Copilot**: `copilot`, `manage_billing:copilot`
+   - ✅ **Network configurations**: `write:network_configurations`, `read:network_configurations`
+   - ✅ **Projects**: `project`, `read:project`
+   - ✅ **GPG keys**: `admin:gpg_key`, `write:gpg_key`, `read:gpg_key`
+   - ✅ **SSH signing keys**: `admin:ssh_signing_key`, `write:ssh_signing_key`, `read:ssh_signing_key`
 
 4. **Copy Your Token**
    - Click **"Generate token"**
