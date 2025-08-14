@@ -3,6 +3,7 @@
 > **Before you begin:** For each challenge, you must first create a folder on your Desktop, open that folder in Cursor IDE, and then clone the project into it. This ensures a clean workspace for every challenge.
 
 ## Prerequisites
+
 - **Docker Installed**:
   - **Ubuntu**: Install Docker Engine with `sudo apt update && sudo apt install docker.io` (or follow [official docs](https://docs.docker.com/engine/install/ubuntu/)).
   - **Windows**: Install Docker Desktop from [docker.com](https://www.docker.com/products/docker-desktop/). Ensure it's running and configured (e.g., enable WSL2 backend if using WSL).
@@ -58,6 +59,7 @@ This guide explains how to use a pre-built Docker image to set up and deploy the
 **Before you begin, ensure your Docker Engine is running:**
 
 ![Docker Engine Running](./assets/DockerEngineStatus.png)
+
 <p align="center"><em>Verify that "Engine running" is displayed in Docker Desktop's status bar</em></p>
 
 1. **Pull the Docker Image**:
@@ -68,6 +70,7 @@ This guide explains how to use a pre-built Docker image to set up and deploy the
 **What to expect after pulling the Docker image:**
 
 ![Docker Image Pulled](./assets/DockerImgSpeedrun.png)
+
 <p align="center"><em>Docker image successfully pulled and ready to use</em></p>
 
 Before running the Docker container, make sure you have pulled the image and cloned the correct branch for your challenge.
@@ -77,10 +80,12 @@ Before running the Docker container, make sure you have pulled the image and clo
 ## Step 3: Run the Docker Container
 
 > **⚠️ IMPORTANT:** Before running this container, ensure that:
+>
 > - **Docker Desktop is running** (if using Windows/macOS)
 > - **Docker Engine is running** (verify this in Docker Desktop's status bar - you should see "Engine running")
 
 **Run the Docker Container:**
+
 - **Ubuntu:**
   ```
   docker run --name speedrun-stylus -it \
@@ -103,6 +108,7 @@ Before running the Docker container, make sure you have pulled the image and clo
 **What to expect after running the container:**
 
 ![Docker Container Running](./assets/DockerContainerSpeedrun.png)
+
 <p align="center"><em>Docker container running successfully in Docker Desktop</em></p>
 
 > **Note:** Once the container is running, you'll see a terminal prompt inside the container where you can execute the commands for the next steps.
@@ -122,6 +128,7 @@ yarn install
 **What to expect when running yarn install:**
 
 ![Yarn Install Guide](./assets/yarn_install_guide.png)
+
 <p align="center"><em>Terminal output showing the yarn install process and available commands inside the Docker container</em></p>
 
 ## Step 4: Set up Environment Variables (done inside the Docker container)
@@ -131,11 +138,12 @@ yarn install
 ---
 
 > **Important:** If you are working on a new challenge and port 3000 is already in use by a previous container, you need to free up the port first. Open a new terminal and run:
+>
 > ```
 > docker rm -f speedrun-stylus
 > ```
+>
 > This will stop and remove the existing container, freeing up port 3000 for your new container to run.
-
 
 > **Note:** When setting your private key in any .env file, append your private key with `0x` (e.g., `0xabc123...`).
 
@@ -144,6 +152,7 @@ yarn install
 ### 🔢 **COUNTER CHALLENGE ONLY**
 
 #### For the Counter Challenge
+
 - In the container, navigate to `packages/nextjs`:
   ```
   cd packages/nextjs
@@ -175,6 +184,7 @@ yarn install
 ### 🎨 **NFT, VENDING MACHINE, MULTISIG, AND UNISWAP CHALLENGES**
 
 #### For NFT, Vending Machine, Multisig, and Uniswap Challenges
+
 - In the container, navigate to `packages/nextjs`:
   ```
   cd packages/nextjs
@@ -182,7 +192,7 @@ yarn install
   ```
   cp .env.example .env
   ```
-- Edit `.env` 
+- Edit `.env`
   ```
   NEXT_PUBLIC_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
   ```
@@ -203,17 +213,20 @@ yarn install
 
 ---
 
-> **Important:** Before running the below given commands, make sure you are in the **root directory** of your project (the folder where you cloned the repository). If you have previously navigated into a subdirectory (such as `packages/nextjs`, `packages/stylus-demo`, or any `cargo-stylus` folder), move back to the root directory using `cd ..` or the appropriate number of `cd ..` commands until you are at the project root. This ensures Docker mounts the correct folder. 
-> OR 
-> You can open up a new terminal in the VS code and run this command : 
->```
+> **Important:** Before running the below given commands, make sure you are in the **root directory** of your project (the folder where you cloned the repository). If you have previously navigated into a subdirectory (such as `packages/nextjs`, `packages/stylus-demo`, or any `cargo-stylus` folder), move back to the root directory using `cd ..` or the appropriate number of `cd ..` commands until you are at the project root. This ensures Docker mounts the correct folder.
+> OR
+> You can open up a new terminal in the VS code and run this command :
+>
+> ```
 > docker exec -it speedrun-stylus bash
->```
+> ```
 
 ## Step 5: Deploy the Contract (Required for All Users)
 
 ⚠️ **Deploy the Contract (Required for All Users)**
-- In the container terminal : 
+
+- In the container terminal :
+
   ```
      deploy-contract.sh <challenge-name>
   ```
@@ -250,9 +263,11 @@ Now **copy the contract address** from the bash terminal output. You will need t
 
 **Step 1: Copy the contract address from the Docker terminal:**
 ![DockerImg](./assets/DockerImg.jpg)
+
 <p align="center"><em>Copy the contract address from the Docker terminal output</em></p>
 
 **Step 2: Paste the contract address in the appropriate file:**
+
 - For most challenges, open `/app/packages/nextjs/app/debug/DebugContracts.tsx` and replace the value of `contractAddress` with your new address.
 - **For the stylus-uniswap-v2 challenge:** Open `/app/packages/nextjs/app/debug/_components/UniswapInterface.tsx` and replace the contract address in the `uniswapContractAddress` variable, as this challenge does not have a `DebugContracts.tsx` file.
 ![Paste contract address in DebugContracts.tsx](./assets/DebugContracts.png)
@@ -263,6 +278,7 @@ Now **copy the contract address** from the bash terminal output. You will need t
 ## Step 7: Start the Frontend
 
 **Start the Frontend**
+
 - In the container terminal:
   ```
   start-frontend.sh
@@ -288,17 +304,21 @@ After you have completed the setup and are ready to submit your solution, follow
      ```
 
 3. **Set your github username and email address:**
+
    ```bash
    git config user.name "yourusername"
    ```
+
    ```
    git config user.email "youremail@example.com"
    ```
 
    Verify it by running this commands
+
    ```
    git config user.name
    ```
+
    ```
    git config user.email
    ```
@@ -317,7 +337,7 @@ After you have completed the setup and are ready to submit your solution, follow
      git push -u origin counter
      ```
 
-4. **Submit Your Challenge**
+5. **Submit Your Challenge**
    - Copy your repository link in the following format (without `.git` at the end):
      ```
      https://github.com/yourusername/your-repo
@@ -331,8 +351,9 @@ After you have completed the setup and are ready to submit your solution, follow
 After your first submission, you need to submit the same challenge **2 more times** on the speedrun platform. For these additional submissions, you need to follow the **Smart Cache Script** steps mentioned in the [rust-crate-and-toml-guide README](https://github.com/purvik6062/session-guide/blob/main/rust-crate-and-toml-guide/README.md).
 
 > **Important**: These additional steps are necessary to complete the full speedrun challenge requirements and demonstrate your understanding of smart caching optimization.
+
 ---
 
-### Note : Make sure to delete the container before moving on to the next challenge as we can't have multiple containers with the same name. 
+### Note : Make sure to delete the container before moving on to the next challenge as we can't have multiple containers with the same name.
 
 ![Delete Container](./assets/DeleteContainer.png)

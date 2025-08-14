@@ -8,6 +8,27 @@ Speedrun Stylus is an interactive learning platform inspired by Speedrun Ethereu
 
 **🔗 Live Platform:** [https://speedrunstylus.com](https://speedrunstylus.com)
 
+## 🚀 Quick Start: First 5 Challenges
+
+- **Prerequisites**: Install Docker Desktop and ensure the engine is running. Pull the image `abxglia/speedrun-stylus:0.1` (see the Docker guide). Generate a GitHub PAT with all scopes.
+
+  - Docker guide: [docker/README.md](../docker/README.md)
+  - PAT guide: [github/PERSONAL_ACCESS_TOKEN.md](../github/PERSONAL_ACCESS_TOKEN.md)
+
+- **For each challenge (1–5)**:
+
+  - Create a new folder → open in VS Code/Cursor
+  - Clone the correct branch for your chosen challenge using the commands here: [Clone commands → Step 1](../docker/README.md#step-1-clone-the-repository-for-your-challenge)
+  - Place these two scripts in the ROOT of your challenge folder (reused for all challenges):
+    - Setup + run: [powershell-7/speedrun.ps1](../powershell-7/speedrun.ps1)
+    - Submit (3x): [github-push/speedrun_submissions.ps1](../github-push/speedrun_submissions.ps1)
+  - Run setup script: [powershell-7/speedrun.ps1](../powershell-7/speedrun.ps1)
+  - Verify app at http://localhost:3000/
+  - Submit 3 times with: [github-push/speedrun_submissions.ps1](../github-push/speedrun_submissions.ps1) (run from project ROOT)
+  - Already have a cloned repo? Use: [powershell7-readme-automation/speedrun_readme_steps.ps1](../powershell7-readme-automation/speedrun_readme_steps.ps1)
+
+- **Full step-by-step guide**: [FIRST_FIVE_CHALLENGES.md](./FIRST_FIVE_CHALLENGES.md)
+
 ## ✨ Key Features
 
 - **10+ Curated Challenges**: From Stylus fundamentals to advanced ZK projects
