@@ -90,29 +90,26 @@ if ($LASTEXITCODE -ne 0) {
   Say "✅ Docker image present; skipping pull."
 }
 
-# 5) Ensure container running (reuse if exists)
-$inspect = docker inspect -f '{{.State.Status}}' $NAME 2>$null
+# 5) Always remove existing container and start fresh
+Say "🧹 Removing any existing container '$NAME'..."
+docker rm -f $NAME 2>$null | Out-Null
 if ($LASTEXITCODE -eq 0) {
-  $status = $inspect.Trim()
-  if ($status -eq 'running') {
-    Say "♻️ Container '$NAME' already running; reusing."
-  } else {
-    Say "▶️ Starting existing container '$NAME'..."
-    docker start $NAME | Out-Null
-  }
+  Say "✅ Existing container removed successfully"
 } else {
-  # 6) Start new container with caches
-  Say "🚀 Starting container..."
-  docker run -d --name $NAME `
-    -v ${PWD}:/app `
-    -v speedrun-yarn-cache:/root/.cache/yarn `
-    -v speedrun-cargo-registry:/root/.cargo/registry `
-    -v speedrun-cargo-git:/root/.cargo/git `
-    -v speedrun-rustup:/root/.rustup `
-    -v speedrun-foundry:/root/.foundry `
-    -p "$PORT`:3000" `
-    $IMG tail -f /dev/null | Out-Null
+  Say "ℹ️ No existing container found (this is normal for first run)"
 }
+
+# 6) Start new container with caches
+Say "🚀 Starting fresh container..."
+docker run -d --name $NAME `
+  -v ${PWD}:/app `
+  -v speedrun-yarn-cache:/root/.cache/yarn `
+  -v speedrun-cargo-registry:/root/.cargo/registry `
+  -v speedrun-cargo-git:/root/.cargo/git `
+  -v speedrun-rustup:/root/.rustup `
+  -v speedrun-foundry:/root/.foundry `
+  -p "$PORT`:3000" `
+  $IMG tail -f /dev/null | Out-Null
 
 # 7) Ensure deploy script exists
 docker exec -it $NAME bash -lc "command -v deploy-contract.sh >/dev/null || { echo 'deploy-contract.sh missing in image'; exit 1; }"
@@ -162,7 +159,7 @@ if ($skipPkPrompt) {
   }
 }
 
-# 11) Deploy and capture address (skip deploy if previous artifacts exist and contain address)
+# 11) Force re-deploy contract every time (clear old artifacts and deploy fresh)
 if ($challenge -eq "counter") {
   $baseDir = "/app/packages/stylus-demo"
 } else {
@@ -172,28 +169,14 @@ if ($challenge -eq "counter") {
 $deployJson = "$baseDir/build/stylus-deployment-info.json"
 $deployLog  = "$baseDir/deploy.log"
 
-$rawJsonAddr = docker exec $NAME bash -lc "if [ -f '$deployJson' ]; then grep -oE '\\"contract_address\\"[[:space:]]*:[[:space:]]*\\"0x[0-9a-fA-F]{40}\\"' '$deployJson' | head -1 | grep -oE '0x[0-9a-fA-F]{40}'; fi" 2>$null
-if ($rawJsonAddr) { $jsonAddr = $rawJsonAddr.Trim() } else { $jsonAddr = $null }
-$rawLogAddr  = docker exec $NAME bash -lc "if [ -f '$deployLog'  ]; then grep -i 'Contract address' '$deployLog' | grep -oE '0x[0-9a-fA-F]{40}' | head -1; fi" 2>$null
-if ($rawLogAddr) { $logAddr = $rawLogAddr.Trim() } else { $logAddr = $null }
+# Clear previous deployment artifacts to force fresh deployment
+Say "🧹 Clearing previous deployment artifacts..."
+docker exec $NAME bash -lc "rm -f '$deployJson' '$deployLog'" | Out-Null
 
-$addr = $null
-if ($jsonAddr -and $logAddr) {
-  if ($jsonAddr -ne $logAddr) {
-    Say "⚠️ Address mismatch in artifacts; preferring JSON: $jsonAddr"
-  }
-  $addr = $jsonAddr
-} elseif ($jsonAddr) {
-  $addr = $jsonAddr
-} elseif ($logAddr) {
-  $addr = $logAddr
-}
-
-if (-not $addr) {
-  Say "🛠️ Deploying contract for '$challenge'..."
-  $deployOut = docker exec $NAME bash -lc "cd /app && deploy-contract.sh $challenge | tee '$deployLog'"
-  $addr = ($deployOut | Select-String -Pattern '0x[0-9a-fA-F]{40}' -AllMatches).Matches | Select-Object -Last 1 | ForEach-Object { $_.Value }
-}
+# Force fresh deployment every time
+Say "🛠️ Deploying contract for '$challenge' (fresh deployment)..."
+$deployOut = docker exec $NAME bash -lc "cd /app && deploy-contract.sh $challenge | tee '$deployLog'"
+$addr = ($deployOut | Select-String -Pattern '0x[0-9a-fA-F]{40}' -AllMatches).Matches | Select-Object -Last 1 | ForEach-Object { $_.Value }
 
 if ($addr) {
   Say "✅ Contract address: $addr"
@@ -205,13 +188,11 @@ if ($addr) {
     $var = "contractAddress"
   }
 
-  # Skip injection if target already contains the same address
-  docker exec $NAME bash -lc "[ -f '$target' ] && grep -q '$addr' '$target'" | Out-Null
-  $alreadySet = ($LASTEXITCODE -eq 0)
-
-  if (-not $alreadySet) {
-    # Inject detected contract address into frontend file using Node (robust across shells)
-    $js = @"
+  # Always inject the new contract address (force update)
+  Say "🔧 Updating frontend with new contract address..."
+  
+  # Inject detected contract address into frontend file using Node (robust across shells)
+  $js = @"
 const fs = require('fs');
 const path = process.env.TARGET;
 const varName = process.env.VARNAME;
@@ -234,9 +215,6 @@ console.log('🔧 Injected ' + varName + ' into ' + path);
     $b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($js))
     $inject = "printf '%s' '$b64' | base64 -d > /tmp/inject.js && node /tmp/inject.js && touch '$target'"
     docker exec -e TARGET="$target" -e VARNAME="$var" -e ADDR="$addr" -it $NAME bash -lc $inject
-  } else {
-    Say "🔎 Contract address already set in target; skipping injection."
-  }
 } else {
   Say "⚠️ Could not detect contract address automatically. Copy it from logs and paste manually in the debug UI file."
 }

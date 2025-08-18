@@ -9,7 +9,7 @@ try {
     Write-Host "⚠️ Could not set execution policy. You may need to run: powershell -ExecutionPolicy Bypass -File .\submit.ps1" -ForegroundColor Yellow
 }
 
-function Say($message) { Write-Host "`n$message" }
+function Say([string]$message) { Write-Host "`n$message" }
 
 function Get-SmartInput([string]$prompt, [bool]$allowEmpty = $false) {
   do {
@@ -28,7 +28,7 @@ function Get-SmartInput([string]$prompt, [bool]$allowEmpty = $false) {
           $input = $input.Substring(0, $input.Length - 1)
           Write-Host "`b `b" -NoNewline
         }
-      } elseif ($key.Character -match '[^\x00-\x1F]') { # Printable character
+      } elseif ($key.Character -and $key.Character -match '[^\x00-\x1F]') { # Printable character
         $input += $key.Character
         Write-Host $key.Character -NoNewline
         
@@ -52,21 +52,54 @@ function Get-SmartInput([string]$prompt, [bool]$allowEmpty = $false) {
   return $input.Trim()
 }
 
-function Get-PlainTextFromSecureString([Security.SecureString]$secure) {
-  $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-  try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+function Get-PlainTextFromSecureString([System.Security.SecureString]$secure) {
+  $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+  try { 
+    return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) 
+  } finally { 
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) 
+  }
 }
 
-function Mask-Token([string]$token) {
-  if (-not $token) { return "(empty)" }
-  if ($token.Length -le 7) { return ("*" * $token.Length) }
-  return ($token.Substring(0,4) + "..." + $token.Substring($token.Length-3))
-}
+
 
 function Ensure-Git() {
   if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Write-Host "❌ git not found. Please install Git and try again."; exit 1
   }
+}
+
+function Check-GitConfig() {
+  # Check if global git config is already set
+  $globalUserName = git config --global user.name 2>$null
+  $globalUserEmail = git config --global user.email 2>$null
+  
+  $gitUserName = ""
+  $gitUserEmail = ""
+  
+  if ($globalUserName -and $globalUserEmail) {
+    Write-Host "✅ Found existing global git configuration:" -ForegroundColor Green
+    Write-Host "   user.name:  $globalUserName" -ForegroundColor Green
+    Write-Host "   user.email: $globalUserEmail" -ForegroundColor Green
+    do {
+      $useExisting = Read-Host "Use existing git configuration? (Y/N)"
+      if ($useExisting -match '^[YyNn]$') { break }
+      Write-Host "❌ Please enter Y or N." -ForegroundColor Red
+    } while ($true)
+    if ($useExisting -eq "Y" -or $useExisting -eq "y") {
+      $gitUserName = $globalUserName
+      $gitUserEmail = $globalUserEmail
+    }
+  }
+  
+  if (-not $gitUserName -or -not $gitUserEmail) {
+    $gitUserName = Read-Host "Enter your git user.name (e.g., yourusername)"
+    $gitUserEmail = Read-Host "Enter your git user.email (e.g., you@example.com)"
+    if (-not $gitUserName) { Write-Host "❌ user.name cannot be empty."; exit 1 }
+    if (-not $gitUserEmail) { Write-Host "❌ user.email cannot be empty."; exit 1 }
+  }
+  
+  return @{"Name" = $gitUserName; "Email" = $gitUserEmail}
 }
 
 # ---------------- Container Config ----------------
@@ -79,11 +112,26 @@ function Ensure-Docker() {
     Write-Host "❌ Docker not found. Install Docker Desktop."; exit 1
   }
   try { docker info | Out-Null } catch { Write-Host "❌ Docker daemon not running. Start Docker Desktop."; exit 1 }
+  
+  # Check if the image is already pulled
+  $imageExists = docker images -q $IMG 2>$null
+  if ($imageExists) {
+    Write-Host "✅ Docker image '$IMG' already pulled" -ForegroundColor Green
+  } else {
+    Say "📦 Pulling Docker image '$IMG'..."
+    docker pull $IMG | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "✅ Docker image pulled successfully" -ForegroundColor Green
+    } else {
+      Write-Host "❌ Failed to pull Docker image" -ForegroundColor Red
+      exit 1
+    }
+  }
 }
 
 function Ensure-Container() {
   $inspect = docker inspect -f '{{.State.Status}}' $NAME 2>$null
-  if ($LASTEXITCODE -eq 0) {
+  if ($LASTEXITCODE -eq 0 -and $inspect -and $inspect.Trim()) {
     $status = $inspect.Trim()
     if ($status -eq 'running') {
       Say "♻️ Container '$NAME' already running; reusing."
@@ -106,25 +154,27 @@ function Ensure-Container() {
 }
 
 function Select-ChallengeBranch() {
-  Write-Host "Choose a challenge (for branch selection):
+  while ($true) {
+    Write-Host "Choose a challenge (for branch selection):
 1) counter
 2) nft
 3) vending-machine
 4) multi-sig
 5) stylus-uniswap"
-  $choice = Read-Host "Enter 1-5"
-  switch ($choice) {
-    "1" { return "counter" }
-    "2" { return "nft" }
-    "3" { return "vending-machine" }
-    "4" { return "multi-sig" }
-    "5" { return "stylus-uniswap" }
-    default { Write-Host "Invalid choice."; exit 1 }
+    $choice = Read-Host "Enter 1-5"
+    switch ($choice) {
+      "1" { return "counter" }
+      "2" { return "nft" }
+      "3" { return "vending-machine" }
+      "4" { return "multi-sig" }
+      "5" { return "stylus-uniswap" }
+      default { Write-Host "❌ Invalid choice. Please enter a number between 1 and 5." -ForegroundColor Red }
+    }
   }
 }
 
 function Find-RepoPath([string]$branch) {
-  # Simple approach: just find any directory with .git
+  # Look for directories with .git first (existing repos)
   $candidates = @(
     "/app",
     "/app/speedrun-$branch", 
@@ -140,11 +190,39 @@ function Find-RepoPath([string]$branch) {
   
   # Fallback: find any .git directory
   $result = docker exec $NAME find /app -maxdepth 2 -name ".git" -type d 2>$null | Select-Object -First 1
-  if ($result) {
-    return ($result -replace "/.git$", "")
+  if ($result -and $result.Trim()) {
+    return ($result.Trim() -replace "/.git$", "")
+  }
+  
+  # If no .git found, look for project directories (packages/ folder or package.json)
+  foreach ($candidate in $candidates) {
+    $hasPackages = docker exec $NAME test -d "$candidate/packages" 2>$null
+    $hasPackageJson = docker exec $NAME test -f "$candidate/package.json" 2>$null
+    if ($LASTEXITCODE -eq 0 -or $hasPackageJson -eq 0) {
+      return $candidate
+    }
+  }
+  
+  # Final fallback: find any directory with packages folder
+  $result = docker exec $NAME find /app -maxdepth 2 -name "packages" -type d 2>$null | Select-Object -First 1
+  if ($result -and $result.Trim()) {
+    return ($result.Trim() -replace "/packages$", "")
   }
   
   return $null
+}
+
+function Find-PackagesFolder([string]$repoPath) {
+  # Find directory containing packages folder
+  $packagesPath = docker exec $NAME bash -c "find '$repoPath' -name 'packages' -type d | head -1" 2>$null
+  if ($packagesPath -and $packagesPath.Trim()) {
+    $packagesPath = ($packagesPath -replace "`r", "").Trim()
+    $parentDir = docker exec $NAME bash -c "dirname '$packagesPath'" 2>$null
+    if ($parentDir -and $parentDir.Trim()) {
+      return ($parentDir -replace "`r", "").Trim()
+    }
+  }
+  return $repoPath
 }
 
 function Ensure-Remote([string]$remoteUrl, [string]$repoPath) {
@@ -164,39 +242,35 @@ function Commit-If-Needed([string]$message, [string]$repoPath) {
 }
 
 # ---------------- Main ----------------
+Ensure-Git
 Ensure-Docker
 Ensure-Container
 
 # 1) Inputs
-Say "🔐 Enter your GitHub Personal Access Token (PAT). It will not be displayed."
-$securePat = Read-Host -AsSecureString "GitHub PAT"
-$patPlain  = Get-PlainTextFromSecureString $securePat
-if (-not $patPlain) { Write-Host "❌ PAT cannot be empty."; exit 1 }
-$patEncoded = [System.Uri]::EscapeDataString($patPlain)
+do {
+  $origin = Read-Host "Enter your GitHub repository origin URL (e.g., https://github.com/username/repo.git)"
+  if ($origin -match '^https://github.com/[^/]+/[^/]+(\.git)?$') { break }
+  Write-Host "❌ Invalid repository URL. Please enter a GitHub https URL like: https://github.com/owner/repo.git" -ForegroundColor Red
+} while ($true)
 
-$origin = Read-Host "Enter your GitHub repository origin URL (e.g., https://github.com/username/repo.git)"
-if (-not $origin.StartsWith("https://github.com/")) {
-  Write-Host "⚠️ Origin does not look like a GitHub https URL; continuing anyway."
-}
-
-# Insert token into origin URL: https://<token>@github.com/owner/repo.git
-if ($origin -notmatch '^https://') { Write-Host "❌ Only https remotes are supported."; exit 1 }
-$remoteWithPat = $origin -replace '^https://', ("https://" + $patEncoded + "@")
-$masked = $origin -replace '^https://', ("https://" + (Mask-Token $patPlain) + "@")
-
-$gitUserName = Read-Host "Enter your git user.name (e.g., yourusername)"
-$gitUserEmail = Read-Host "Enter your git user.email (e.g., you@example.com)"
-if (-not $gitUserName) { Write-Host "❌ user.name cannot be empty."; exit 1 }
-if (-not $gitUserEmail) { Write-Host "❌ user.email cannot be empty."; exit 1 }
+# Check git configuration
+$gitConfig = Check-GitConfig
+$gitUserName = $gitConfig.Name
+$gitUserEmail = $gitConfig.Email
 
 # Collect private key for later use in smart cache and deployment
 Say "🔐 Enter your wallet private key for smart cache and deployment operations"
-$securePrivateKey = Read-Host -AsSecureString "Private Key (will not be displayed)"
-$userPrivateKey = Get-PlainTextFromSecureString $securePrivateKey
-if (-not $userPrivateKey) { Write-Host "❌ Private key cannot be empty."; exit 1 }
-if (-not $userPrivateKey.StartsWith("0x")) {
-  $userPrivateKey = "0x" + $userPrivateKey
-}
+do {
+  $securePrivateKey = Read-Host -AsSecureString "Private Key (will not be displayed)"
+  $userPrivateKey = Get-PlainTextFromSecureString $securePrivateKey
+  $userPrivateKey = ($userPrivateKey -replace "`r", "").Trim()
+  $pkNoPrefix = ($userPrivateKey -replace '^0x','')
+  if ($pkNoPrefix -match '^[0-9a-fA-F]{64}$') {
+    $userPrivateKey = '0x' + $pkNoPrefix
+    break
+  }
+  Write-Host "❌ Invalid private key. Provide a 64-hex-character key (with or without 0x)." -ForegroundColor Red
+} while ($true)
 
 $branch = Select-ChallengeBranch
 
@@ -204,13 +278,20 @@ $branch = Select-ChallengeBranch
 $repoPath = Find-RepoPath -branch $branch
 if (-not $repoPath) {
   Write-Host "❌ No speedrun project found inside container. Looking for a directory with:"
-  Write-Host "   - .git folder (git repository)"
-  Write-Host "   - packages/ folder OR package.json file (project structure)"
-  Write-Host "Make sure you have cloned a speedrun project properly."
+  Write-Host "   - .git folder (existing git repository)"
+  Write-Host "   - packages/ folder (speedrun project structure)"
+  Write-Host "   - package.json file (Node.js project)"
+  Write-Host ""
+  Write-Host "💡 Make sure you have:"
+  Write-Host "   1. Cloned a speedrun project properly, OR"
+  Write-Host "   2. Created a project directory with packages/ folder or package.json"
+  Write-Host "   3. If .git folder was deleted, the script will initialize a fresh repository"
   exit 1
 }
 # Sanitize Windows line endings to avoid bash errors
-$repoPath = ($repoPath -replace "`r", "").Trim()
+if ($repoPath) {
+  $repoPath = ($repoPath -replace "`r", "").Trim()
+}
 Say "📁 Using speedrun project: $repoPath"
 
 # 3) Configure git identity inside container
@@ -218,49 +299,131 @@ Say "👤 Setting git identity inside container..."
 docker exec $NAME bash -c "cd '$repoPath' && git config user.name '$gitUserName'" | Out-Null
 docker exec $NAME bash -c "cd '$repoPath' && git config user.email '$gitUserEmail'" | Out-Null
 
-$confirmName  = (docker exec $NAME bash -c "cd '$repoPath' && git config user.name").Trim()
-$confirmEmail = (docker exec $NAME bash -c "cd '$repoPath' && git config user.email").Trim()
+$confirmNameResult = docker exec $NAME bash -c "cd '$repoPath' && git config user.name" 2>$null
+$confirmEmailResult = docker exec $NAME bash -c "cd '$repoPath' && git config user.email" 2>$null
+$confirmName = if ($confirmNameResult) { $confirmNameResult.Trim() } else { "(not set)" }
+$confirmEmail = if ($confirmEmailResult) { $confirmEmailResult.Trim() } else { "(not set)" }
 Write-Host "   user.name:  $confirmName"
 Write-Host "   user.email: $confirmEmail"
 
-# 4) Set remote with PAT inside container
-Say "🔗 Setting remote origin (token masked): $masked"
-Ensure-Remote -remoteUrl $remoteWithPat -repoPath $repoPath
+# 4) Set remote origin inside container (for reference only)
+Say "🔗 Setting remote origin: $origin"
+Ensure-Remote -remoteUrl $origin -repoPath $repoPath
+Say "✅ Remote origin set in container (git operations will be done from fresh terminal)"
 
 # 5) Ensure correct branch inside container
 Ensure-Branch -branch $branch -repoPath $repoPath
 
 # 6) Get commit message from user and commit if needed
+Say "💡 IMPORTANT: You will handle your own commits in the fresh terminal that opens next."
+Say "   The script will NOT auto-commit with generic messages like 'Initial commit from automation script'."
+Say "   You will have full control over your commit messages and git workflow."
+
 $commitMessage = Get-SmartInput "Enter your commit message (or press Enter to skip commit): " -allowEmpty $true
 if ($commitMessage) {
-  Commit-If-Needed -message $commitMessage -repoPath $repoPath
-  Say "✅ Changes committed with message: '$commitMessage'"
+  Say "✅ Your commit message saved: '$commitMessage'"
+  Say "💡 You'll use this message when you commit in the fresh terminal"
 } else {
-  Say "⏭️ Skipping commit - no message provided"
+  Say "⏭️ No commit message provided - you can enter one in the fresh terminal"
 }
 
-# 7) Push from inside container
-Say "🚀 Pushing to origin '$branch'..."
-$pushOutput = docker exec $NAME bash -c "cd '$repoPath' && git push -u origin '$branch'" 2>&1
-$pushSuccess = ($LASTEXITCODE -eq 0)
+# 7) Push from fresh PowerShell terminal
+# Find the packages folder to determine the correct directory
+$packagesDir = Find-PackagesFolder -repoPath $repoPath
+Say "🚀 Opening new PowerShell terminal for git push..."
+$pushScript = @"
+# Change to the project directory
+cd '$((Get-Location).Path)'
 
-if ($pushSuccess) {
-  Say "✅ Push complete. Your repository should be updated."
+# Find directory containing packages folder
+`$packagesPath = Get-ChildItem -Recurse -Directory -Name "packages" -ErrorAction SilentlyContinue | Select-Object -First 1
+if (`$packagesPath) {
+    `$projectDir = Split-Path `$packagesPath -Parent
+    if (`$projectDir -and (Test-Path `$projectDir)) {
+        cd `$projectDir
+        Write-Host "Navigated to project directory containing packages: `$projectDir" -ForegroundColor Green
+    }
 } else {
-  Write-Host "❌ Push failed. Error details:" -ForegroundColor Red
-  Write-Host $pushOutput -ForegroundColor Yellow
-  Write-Host "Common causes:" -ForegroundColor Yellow
-  Write-Host "   - Invalid PAT token or insufficient permissions" -ForegroundColor Yellow
-  Write-Host "   - Repository doesn't exist or you don't have write access" -ForegroundColor Yellow
-  Write-Host "   - Branch protection rules preventing push" -ForegroundColor Yellow
-  
-  $continueAfterPushError = Read-Host "Push failed. Would you like to continue with the next steps (Smart Cache configuration)? (Y/N)"
-  if ($continueAfterPushError -ne "Y" -and $continueAfterPushError -ne "y") {
-    Say "⏭️ Script terminated by user choice. You can fix the push issue and run the script again."
-    exit 0
-  }
-  Say "⏭️ Continuing with next steps despite push failure..."
+    # Fallback to speedrun-$branch directory
+    if (Test-Path 'speedrun-$branch') {
+        cd 'speedrun-$branch'
+        Write-Host "Using speedrun project directory: speedrun-$branch" -ForegroundColor Yellow
+    }
 }
+
+# Initialize git repository if it doesn't exist
+if (-not (Test-Path '.git')) {
+    Write-Host 'Initializing new git repository...' -ForegroundColor Yellow
+    git init
+}
+
+# Set git user identity
+git config user.name '$gitUserName'
+git config user.email '$gitUserEmail'
+
+# Add remote origin
+git remote remove origin 2>`$null
+git remote add origin '$origin'
+
+# Ensure correct branch
+git branch -M '$branch'
+
+# Check if this is a fresh repository (no commits)
+`$hasCommits = git log --oneline -1 2>`$null
+`$isFreshRepo = (`$LASTEXITCODE -ne 0)
+
+# Check if there are changes to commit
+`$status = git status --porcelain
+if (`$status -or `$isFreshRepo) {
+    if (`$isFreshRepo) {
+        Write-Host 'Fresh repository detected. Adding all files for initial commit...' -ForegroundColor Yellow
+    } else {
+        Write-Host 'Changes detected. Auto-committing with your saved message...' -ForegroundColor Yellow
+    }
+    
+    git add .
+    
+    if ('$commitMessage') {
+        git commit -m '$commitMessage'
+        Write-Host 'Committed with message: $commitMessage' -ForegroundColor Green
+    } else {
+        if (`$isFreshRepo) {
+            git commit -m 'Initial commit from speedrun automation script'
+            Write-Host 'Initial commit created with default message' -ForegroundColor Green
+        } else {
+            git commit -m 'Automated commit from speedrun script'
+            Write-Host 'Committed with default message' -ForegroundColor Green
+        }
+    }
+} else {
+    Write-Host 'No changes detected. Ready to push...' -ForegroundColor Green
+}
+
+# Push to GitHub
+Write-Host 'Pushing to GitHub...' -ForegroundColor Green
+git push -u origin '$branch'
+
+if (`$LASTEXITCODE -eq 0) {
+    Write-Host '✅ Push successful!' -ForegroundColor Green
+} else {
+    Write-Host '❌ Push failed. Check your git credentials and try again.' -ForegroundColor Red
+}
+
+Write-Host 'Press Enter to close this terminal...' -ForegroundColor Yellow
+[void](Read-Host)
+"@
+
+# Save the push script to a temporary file
+$pushScriptPath = Join-Path $env:TEMP "push_to_github.ps1"
+$pushScript | Out-File -FilePath $pushScriptPath -Encoding UTF8
+
+# Open new PowerShell terminal with the push script
+Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy", "Bypass", "-File", "`"$pushScriptPath`"" -WindowStyle Normal
+
+Say "✅ New PowerShell terminal opened for git push"
+Say "💡 Complete the push in the new terminal, then return here to continue"
+Say "⏸️  Press Enter when you're ready to continue with Smart Cache configuration..."
+Read-Host
 
 # 8) Smart Cache Configuration (Optional)
 Say "🧠 Smart Cache Configuration for Gas Optimization"
@@ -296,7 +459,6 @@ if ($configureSmartCache -eq "Y" -or $configureSmartCache -eq "y") {
   docker exec $NAME bash -c "cd '$repoPath' && npx smart-cache init" | Out-Null
   
   # Get user inputs for smart cache configuration
-  Say "💡 Using the private key you provided earlier for wallet operations"
   $deployerAddress = Get-SmartInput "Enter your wallet address that deployed the contracts: "
   $contractAddress = Get-SmartInput "Enter your contract address (or press Enter to skip): " -allowEmpty $true
   
@@ -332,8 +494,9 @@ fi
 
   # Write script to container and execute
   $scriptB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($updateScript))
-  docker exec $NAME bash -c "echo '$scriptB64' | base64 -d > /tmp/update_toml.sh && chmod +x /tmp/update_toml.sh"
+  docker exec $NAME bash -c "echo '$scriptB64' | base64 -d > /tmp/update_toml.sh && sed -i 's/\r$//' /tmp/update_toml.sh && chmod +x /tmp/update_toml.sh"
   docker exec $NAME bash -c "/tmp/update_toml.sh '$deployerAddress' '$contractAddress'"
+  Start-Sleep -Milliseconds 500
   
   Say "✅ Smart cache configuration created at: $repoPath/smartcache.toml"
   
@@ -410,24 +573,80 @@ fi
     }
     
     # Push the new changes
-    Say "🚀 Pushing smart cache configuration to GitHub..."
-    $smartCachePushOutput = docker exec $NAME bash -c "cd '$repoPath' && git push origin '$branch'" 2>&1
-    $smartCachePushSuccess = ($LASTEXITCODE -eq 0)
-    
-    if ($smartCachePushSuccess) {
-      Say "✅ Smart cache configuration pushed to GitHub successfully!"
-    } else {
-      Write-Host "❌ Failed to push smart cache configuration. Error details:" -ForegroundColor Red
-      Write-Host $smartCachePushOutput -ForegroundColor Yellow
-      Write-Host "⚠️ You can push manually later or continue with the next steps." -ForegroundColor Yellow
-      
-      $continueAfterSmartCachePushError = Read-Host "Smart cache push failed. Would you like to continue with Rust Crate automation? (Y/N)"
-      if ($continueAfterSmartCachePushError -ne "Y" -and $continueAfterSmartCachePushError -ne "y") {
-        Say "⏭️ Script completed. Smart cache is configured but not pushed to GitHub."
-        exit 0
-      }
-      Say "⏭️ Continuing with Rust Crate automation despite push failure..."
+    Say "🚀 Opening new PowerShell terminal for smart cache push..."
+    $smartCachePushScript = @"
+# Change to the project directory
+cd '$((Get-Location).Path)'
+
+# Find directory containing packages folder
+`$packagesPath = Get-ChildItem -Recurse -Directory -Name "packages" -ErrorAction SilentlyContinue | Select-Object -First 1
+if (`$packagesPath) {
+    `$projectDir = Split-Path `$packagesPath -Parent
+    if (`$projectDir -and (Test-Path `$projectDir)) {
+        cd `$projectDir
+        Write-Host "Navigated to project directory containing packages: `$projectDir" -ForegroundColor Green
     }
+} else {
+    # Fallback to speedrun-$branch directory
+    if (Test-Path 'speedrun-$branch') {
+        cd 'speedrun-$branch'
+        Write-Host "Using speedrun project directory: speedrun-$branch" -ForegroundColor Yellow
+    }
+}
+
+# Initialize git repository if it doesn't exist
+if (-not (Test-Path '.git')) {
+    Write-Host 'Initializing new git repository...' -ForegroundColor Yellow
+    git init
+}
+
+# Set git user identity
+git config user.name '$gitUserName'
+git config user.email '$gitUserEmail'
+
+# Add remote origin
+git remote remove origin 2>`$null
+git remote add origin '$origin'
+
+# Ensure correct branch
+git branch -M '$branch'
+
+# Check if there are changes to commit
+`$status = git status --porcelain
+if (`$status) {
+    Write-Host 'Changes detected. Auto-committing smart cache configuration...' -ForegroundColor Yellow
+    git add .
+    git commit -m 'Smart cache configuration update'
+    Write-Host 'Committed smart cache changes' -ForegroundColor Green
+} else {
+    Write-Host 'No changes detected. Ready to push...' -ForegroundColor Green
+}
+
+# Push smart cache configuration to GitHub
+Write-Host 'Pushing smart cache configuration to GitHub...' -ForegroundColor Green
+git push origin '$branch'
+
+if (`$LASTEXITCODE -eq 0) {
+    Write-Host '✅ Smart cache configuration pushed successfully!' -ForegroundColor Green
+} else {
+    Write-Host '❌ Push failed. Check your git credentials and try again.' -ForegroundColor Red
+}
+
+Write-Host 'Press Enter to close this terminal...' -ForegroundColor Yellow
+[void](Read-Host)
+"@
+
+    # Save the push script to a temporary file
+    $smartCachePushScriptPath = Join-Path $env:TEMP "push_smartcache.ps1"
+    $smartCachePushScript | Out-File -FilePath $smartCachePushScriptPath -Encoding UTF8
+
+    # Open new PowerShell terminal with the push script
+    Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy", "Bypass", "-File", "`"$smartCachePushScriptPath`"" -WindowStyle Normal
+
+    Say "✅ New PowerShell terminal opened for smart cache push"
+    Say "💡 Complete the push in the new terminal, then return here to continue"
+    Say "⏸️  Press Enter when you're ready to continue with Rust Crate automation..."
+    Read-Host
   } else {
     Say "⏭️ Smart cache configuration created but not committed. You can commit manually later."
   }
@@ -444,11 +663,11 @@ if ($configureRustCrate -eq "Y" -or $configureRustCrate -eq "y") {
   # Find Cargo.toml directory
   Say "📁 Locating Cargo.toml directory..."
   $cargoDir = docker exec $NAME bash -c "find '$repoPath' -name 'Cargo.toml' -type f | head -1 | xargs dirname" 2>$null
-  if (-not $cargoDir) {
+  if (-not $cargoDir -or -not $cargoDir.Trim()) {
     $cargoDir = docker exec $NAME bash -c "find '$repoPath' -name 'rust-toolchain.toml' -type f | head -1 | xargs dirname" 2>$null
   }
   
-  if (-not $cargoDir) {
+  if (-not $cargoDir -or -not $cargoDir.Trim()) {
     Write-Host "❌ Could not find Cargo.toml or rust-toolchain.toml directory" -ForegroundColor Red
     Say "⏭️ Skipping Rust crate automation"
   } else {
@@ -469,7 +688,7 @@ if ($configureRustCrate -eq "Y" -or $configureRustCrate -eq "y") {
     # Find and update lib.rs
     Say "🔧 Updating lib.rs file..."
     $libRsPath = docker exec $NAME bash -c "find '$cargoDir' -name 'lib.rs' -type f | head -1" 2>$null
-    if (-not $libRsPath) {
+    if (-not $libRsPath -or -not $libRsPath.Trim()) {
       Write-Host "❌ Could not find lib.rs file" -ForegroundColor Red
       Say "⏭️ Skipping lib.rs updates"
     } else {
@@ -477,7 +696,7 @@ if ($configureRustCrate -eq "Y" -or $configureRustCrate -eq "y") {
       Say "✅ Found lib.rs at: $libRsPath"
       
       # Update lib.rs with import and cacheable function
-      $updateLibScript = @"
+  $updateLibScript = @"
 #!/bin/bash
 set -e
 libfile='$libRsPath'
@@ -510,8 +729,8 @@ fi
 "@
       
       $libScriptB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($updateLibScript))
-      docker exec $NAME bash -c "echo '$libScriptB64' | base64 -d > /tmp/update_lib.sh && chmod +x /tmp/update_lib.sh"
-      docker exec $NAME bash -c "/tmp/update_lib.sh"
+      docker exec $NAME bash -c "echo '$libScriptB64' | base64 -d > /tmp/update_lib.sh && sed -i 's/\r$//' /tmp/update_lib.sh && chmod +x /tmp/update_lib.sh"
+      docker exec $NAME bash -c "/tmp/update_lib.sh '$libRsPath'"
       
       Say "✅ lib.rs updated with stylus-cache-sdk integration"
       
@@ -590,26 +809,90 @@ fi
         Say "✅ Rust changes committed"
         
         # Push the Rust changes
-        Say "🚀 Pushing Rust crate automation to GitHub..."
-        $rustPushOutput = docker exec $NAME bash -c "cd '$repoPath' && git push origin '$branch'" 2>&1
-        $rustPushSuccess = ($LASTEXITCODE -eq 0)
-        
-        if ($rustPushSuccess) {
-          Say "✅ Rust crate automation pushed to GitHub successfully!"
-          Say "🎉 All automation complete! Your contract now includes:"
-          Write-Host "   ✅ Smart cache configuration"
-          Write-Host "   ✅ Stylus cache SDK integration"
-          Write-Host "   ✅ Optimized contract functions"
-        } else {
-          Write-Host "❌ Failed to push Rust changes. Error details:" -ForegroundColor Red
-          Write-Host $rustPushOutput -ForegroundColor Yellow
-          Write-Host "⚠️ All configurations are complete locally. You can push manually later." -ForegroundColor Yellow
-          Say "🎉 Local automation complete! Your contract now includes:"
-          Write-Host "   ✅ Smart cache configuration (local)"
-          Write-Host "   ✅ Stylus cache SDK integration (local)"
-          Write-Host "   ✅ Optimized contract functions (local)"
-          Write-Host "   ⚠️ Manual push required to sync with GitHub"
-        }
+        Say "🚀 Opening new PowerShell terminal for Rust automation push..."
+        $rustPushScript = @"
+# Change to the project directory
+cd '$((Get-Location).Path)'
+
+# Find directory containing packages folder
+`$packagesPath = Get-ChildItem -Recurse -Directory -Name "packages" -ErrorAction SilentlyContinue | Select-Object -First 1
+if (`$packagesPath) {
+    `$projectDir = Split-Path `$packagesPath -Parent
+    if (`$projectDir -and (Test-Path `$projectDir)) {
+        cd `$projectDir
+        Write-Host "Navigated to project directory containing packages: `$projectDir" -ForegroundColor Green
+    }
+} else {
+    # Fallback to speedrun-$branch directory
+    if (Test-Path 'speedrun-$branch') {
+        cd 'speedrun-$branch'
+        Write-Host "Using speedrun project directory: speedrun-$branch" -ForegroundColor Yellow
+    }
+}
+
+# Initialize git repository if it doesn't exist
+if (-not (Test-Path '.git')) {
+    Write-Host 'Initializing new git repository...' -ForegroundColor Yellow
+    git init
+}
+
+# Set git user identity
+git config user.name '$gitUserName'
+git config user.email '$gitUserEmail'
+
+# Add remote origin
+git remote remove origin 2>`$null
+git remote add origin '$origin'
+
+# Ensure correct branch
+git branch -M '$branch'
+
+# Check if there are changes to commit
+`$status = git status --porcelain
+if (`$status) {
+    Write-Host 'Changes detected. Auto-committing Rust automation changes...' -ForegroundColor Yellow
+    git add .
+    git commit -m 'Rust crate automation update'
+    Write-Host 'Committed Rust automation changes' -ForegroundColor Green
+} else {
+    Write-Host 'No changes detected. Ready to push...' -ForegroundColor Green
+}
+
+# Push Rust crate automation to GitHub
+Write-Host 'Pushing Rust crate automation to GitHub...' -ForegroundColor Green
+git push origin '$branch'
+
+if (`$LASTEXITCODE -eq 0) {
+    Write-Host '✅ Rust crate automation pushed successfully!' -ForegroundColor Green
+    Write-Host '🎉 All automation complete! Your contract now includes:' -ForegroundColor Green
+    Write-Host '   ✅ Smart cache configuration' -ForegroundColor Green
+    Write-Host '   ✅ Stylus cache SDK integration' -ForegroundColor Green
+    Write-Host '   ✅ Optimized contract functions' -ForegroundColor Green
+} else {
+    Write-Host '❌ Push failed. Check your git credentials and try again.' -ForegroundColor Red
+    Write-Host '⚠️ All configurations are complete locally. You can push manually later.' -ForegroundColor Yellow
+    Write-Host '🎉 Local automation complete! Your contract now includes:' -ForegroundColor Green
+    Write-Host '   ✅ Smart cache configuration (local)' -ForegroundColor Green
+    Write-Host '   ✅ Stylus cache SDK integration (local)' -ForegroundColor Green
+    Write-Host '   ✅ Optimized contract functions (local)' -ForegroundColor Green
+    Write-Host '   ⚠️ Manual push required to sync with GitHub' -ForegroundColor Yellow
+}
+
+Write-Host 'Press Enter to close this terminal...' -ForegroundColor Yellow
+[void](Read-Host)
+"@
+
+        # Save the push script to a temporary file
+        $rustPushScriptPath = Join-Path $env:TEMP "push_rust.ps1"
+        $rustPushScript | Out-File -FilePath $rustPushScriptPath -Encoding UTF8
+
+        # Open new PowerShell terminal with the push script
+        Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy", "Bypass", "-File", "`"$rustPushScriptPath`"" -WindowStyle Normal
+
+        Say "✅ New PowerShell terminal opened for Rust automation push"
+        Say "💡 Complete the push in the new terminal, then return here to continue"
+        Say "⏸️  Press Enter when you're ready to continue..."
+        Read-Host
       } else {
         Say "⏭️ Rust changes created but not committed. You can commit manually later."
       }
