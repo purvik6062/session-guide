@@ -701,15 +701,10 @@ if ($configureRustCrate -eq "Y" -or $configureRustCrate -eq "y") {
 set -e
 libfile='$libRsPath'
 
-# Add import if not already present
+  # Add import if not already present
 if ! grep -q "use stylus_cache_sdk" "`$libfile"; then
-  # Find the first line that starts with 'use' and add our import before it
-  if grep -q "^use " "`$libfile"; then
-    sed -i '1i use stylus_cache_sdk::{is_contract_cacheable};' "`$libfile"
-  else
-    # If no use statements, add at the top after any comments
-    sed -i '1i use stylus_cache_sdk::{is_contract_cacheable};\n' "`$libfile"
-  fi
+  # Add after extern crate alloc line
+  sed -i '/extern crate alloc;/a use stylus_cache_sdk::{is_contract_cacheable};' "`$libfile"
 fi
 
 # Add is_cacheable function if not already present
@@ -718,8 +713,7 @@ if ! grep -q "pub fn is_cacheable" "`$libfile"; then
   if grep -q "impl " "`$libfile"; then
     # Add the function before the last closing brace of the impl block
     sed -i '/impl /,/^}/ {
-      /^}/ i\    #[public]\
-    pub fn is_cacheable(&self) -> bool {\
+      /^}/ i\    pub fn is_cacheable(&self) -> bool {\
         is_contract_cacheable()\
     }\
 
