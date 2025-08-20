@@ -422,10 +422,134 @@ Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy", "Bypass", "-Fil
 
 Say "✅ New PowerShell terminal opened for git push"
 Say "💡 Complete the push in the new terminal, then return here to continue"
-Say "⏸️  Press Enter when you're ready to continue with Smart Cache configuration..."
+Say "⏸️  Press Enter when you're ready to continue..."
 Read-Host
 
-# 8) Smart Cache Configuration (Optional)
+# 2) Stylus Smart Contract Verification (Optional)
+Say "🔍 Stylus Smart Contract Verification"
+$verifyContract = Read-Host "Do you want to verify your Stylus smart contract? (Y/N)"
+if ($verifyContract -eq "Y" -or $verifyContract -eq "y") {
+  Say "🔧 Setting up contract verification..."
+  
+  # Find Rust project directory
+  Say "📁 Locating Rust project directory..."
+  $rustProjectDir = $null
+  
+  # Look for Cargo.lock first, then Cargo.toml, then rust-toolchain.toml
+  $cargoLockDir = docker exec $NAME bash -c "find '$repoPath' -name 'Cargo.lock' -type f | head -1 | xargs dirname" 2>$null
+  if ($cargoLockDir -and $cargoLockDir.Trim()) {
+    $rustProjectDir = ($cargoLockDir -replace "`r", "").Trim()
+  } else {
+    $cargoTomlDir = docker exec $NAME bash -c "find '$repoPath' -name 'Cargo.toml' -type f | head -1 | xargs dirname" 2>$null
+    if ($cargoTomlDir -and $cargoTomlDir.Trim()) {
+      $rustProjectDir = ($cargoTomlDir -replace "`r", "").Trim()
+    } else {
+      $rustToolchainDir = docker exec $NAME bash -c "find '$repoPath' -name 'rust-toolchain.toml' -type f | head -1 | xargs dirname" 2>$null
+      if ($rustToolchainDir -and $rustToolchainDir.Trim()) {
+        $rustProjectDir = ($rustToolchainDir -replace "`r", "").Trim()
+      }
+    }
+  }
+  
+  if (-not $rustProjectDir) {
+    Write-Host "❌ Could not find Rust project directory (no Cargo.lock, Cargo.toml, or rust-toolchain.toml found)" -ForegroundColor Red
+    Say "⏭️ Skipping contract verification"
+  } else {
+    Say "✅ Found Rust project at: $rustProjectDir"
+    
+    # Initialize git repository in the Rust project directory
+    Say "🔧 Initializing git repository in Rust project directory..."
+    docker exec $NAME bash -c "cd '$rustProjectDir' && git init" | Out-Null
+    
+    # Configure git identity in the Rust project
+    docker exec $NAME bash -c "cd '$rustProjectDir' && git config user.name '$gitUserName'" | Out-Null
+    docker exec $NAME bash -c "cd '$rustProjectDir' && git config user.email '$gitUserEmail'" | Out-Null
+    
+    # Add remote origin
+    docker exec $NAME bash -c "cd '$rustProjectDir' && git remote add origin '$origin'" | Out-Null
+    
+    # Add all files and commit
+    docker exec $NAME bash -c "cd '$rustProjectDir' && git add ." | Out-Null
+    docker exec $NAME bash -c "cd '$rustProjectDir' && git commit -m 'Stylus smart contract verification'" | Out-Null
+    
+    # Create and switch to verify branch
+    docker exec $NAME bash -c "cd '$rustProjectDir' && git branch -M verify" | Out-Null
+    
+    Say "🚀 Opening new PowerShell terminal for contract verification push..."
+    $verifyPushScript = @"
+# Change to the project directory
+cd '$((Get-Location).Path)'
+
+# Navigate to the Rust project directory
+`$rustProjectPath = '$rustProjectDir' -replace '^/app/', ''
+if (Test-Path `$rustProjectPath) {
+    cd `$rustProjectPath
+    Write-Host "Navigated to Rust project directory: `$rustProjectPath" -ForegroundColor Green
+} else {
+    Write-Host "❌ Could not find Rust project directory: `$rustProjectPath" -ForegroundColor Red
+    Write-Host "Press Enter to close this terminal..." -ForegroundColor Yellow
+    [void](Read-Host)
+    exit 1
+}
+
+# Initialize git repository if it doesn't exist
+if (-not (Test-Path '.git')) {
+    Write-Host 'Initializing new git repository...' -ForegroundColor Yellow
+    git init
+}
+
+# Set git user identity
+git config user.name '$gitUserName'
+git config user.email '$gitUserEmail'
+
+# Add remote origin
+git remote remove origin 2>`$null
+git remote add origin '$origin'
+
+# Add all files and commit
+git add .
+git commit -m 'Stylus smart contract verification'
+
+# Create and switch to verify branch
+git branch -M verify
+
+# Push to verify branch
+Write-Host 'Pushing to verify branch for contract verification...' -ForegroundColor Green
+git push -u origin verify
+
+if (`$LASTEXITCODE -eq 0) {
+    Write-Host '✅ Contract verification push successful!' -ForegroundColor Green
+    Write-Host '🎯 Your Rust contract has been pushed to the verify branch' -ForegroundColor Green
+} else {
+    Write-Host '❌ Push failed. Check your git credentials and try again.' -ForegroundColor Red
+}
+
+Write-Host 'Press Enter to close this terminal...' -ForegroundColor Yellow
+[void](Read-Host)
+"@
+
+    # Save the verify push script to a temporary file
+    $verifyPushScriptPath = Join-Path $env:TEMP "push_verify.ps1"
+    $verifyPushScript | Out-File -FilePath $verifyPushScriptPath -Encoding UTF8
+
+    # Open new PowerShell terminal with the verify push script
+    Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy", "Bypass", "-File", "`"$verifyPushScriptPath`"" -WindowStyle Normal
+
+    Say "✅ New PowerShell terminal opened for contract verification push"
+    Say "💡 Complete the push in the new terminal, then return here to continue"
+    Say "⏸️  Press Enter when you're ready to continue..."
+    Read-Host
+    
+    # Clean up the .git directory in the Rust project
+    Say "🧹 Cleaning up git repository in Rust project directory..."
+    docker exec $NAME bash -c "cd '$rustProjectDir' && rm -rf .git" | Out-Null
+    Say "✅ Git repository cleaned up from Rust project directory"
+  }
+} else {
+  Say "⏭️ Skipping contract verification. Continuing with Smart Cache configuration..."
+}
+
+# 3) Smart Cache Configuration (Optional)
 Say "🧠 Smart Cache Configuration for Gas Optimization"
 $configureSmartCache = Read-Host "Are you ready for smart cache configuration for making this contract efficient for gas savings? (Y/N)"
 if ($configureSmartCache -eq "Y" -or $configureSmartCache -eq "y") {
@@ -654,7 +778,7 @@ Write-Host 'Press Enter to close this terminal...' -ForegroundColor Yellow
   Say "⏭️ Skipping smart cache configuration. You can configure it manually later if needed."
 }
 
-# 9) Rust Crate Automation (Optional)
+# 4) Rust Crate Automation (Optional)
 Say "🦀 Rust Crate Automation for Contract Optimization"
 $configureRustCrate = Read-Host "Are you ready to use RUST crate to automate the process? (Y/N)"
 if ($configureRustCrate -eq "Y" -or $configureRustCrate -eq "y") {
