@@ -13,8 +13,8 @@
 
 ## 📋 Quick Navigation
 
-- [Step 1: Clone the Repository for Your Challenge](#step-1-clone-the-repository-for-your-challenge)
-- [Step 2: General Steps](#step-2-general-steps-common-to-both-windowsubuntu-users)
+- [Step 1: General Steps](#step-1-general-steps-common-to-both-windowsubuntu-users)
+- [Step 2: Clone the Repository for Your Challenge](#step-2-clone-the-repository-for-your-challenge)
 - [Step 3: Run the Docker Container](#step-3-run-the-docker-container)
 - [Step 4: Set up Environment Variables](#step-4-set-up-environment-variables-done-inside-the-docker-container)
 - [Step 5: Deploy the Contract](#step-5-deploy-the-contract-required-for-all-users)
@@ -25,7 +25,35 @@
 
 ---
 
-## Step 1: Clone the Repository for Your Challenge
+## Step 1: General Steps (Common to both Windows/Ubuntu Users)
+
+**Before you begin, ensure your Docker Engine is running:**
+
+![Docker Engine Running](./assets/DockerEngineStatus.png)
+
+<p align="center"><em>Verify that "Engine running" is displayed in Docker Desktop's status bar</em></p>
+
+1. **Pull the Docker Image**:
+   - **Ubuntu/Windows:**
+     ```
+     docker pull abxglia/speedrun-stylus:0.1
+     ```
+   - **MAC:**
+     ```
+     docker pull --platform linux/amd64 abxglia/speedrun-stylus-mac:0.1
+     ```
+
+**What to expect after pulling the Docker image:**
+
+![Docker Image Pulled](./assets/DockerImgSpeedrun.png)
+
+<p align="center"><em>Docker image successfully pulled and ready to use</em></p>
+
+Before running the Docker container, make sure you have pulled the image and cloned the correct branch for your challenge.
+
+---
+
+## Step 2: Clone the Repository for Your Challenge
 
 Choose the appropriate command below for your challenge:
 
@@ -53,27 +81,6 @@ Choose the appropriate command below for your challenge:
 After cloning, open the project folder in Cursor IDE to continue with the setup.
 
 This guide explains how to use a pre-built Docker image to set up and deploy the Speedrun Stylus project to the Arbitrum Sepolia testnet. The Docker image includes all necessary dependencies (Node.js, Yarn, Rust with nightly toolchain and rust-src, cargo-stylus, Foundry, etc.), so you don't need to install them manually. This is tailored for deploying via `run-sepolia-deploy.sh` and running the frontend.
-
-## Step 2: General Steps (Common to both Windows/Ubuntu Users)
-
-**Before you begin, ensure your Docker Engine is running:**
-
-![Docker Engine Running](./assets/DockerEngineStatus.png)
-
-<p align="center"><em>Verify that "Engine running" is displayed in Docker Desktop's status bar</em></p>
-
-1. **Pull the Docker Image**:
-   ```
-   docker pull abxglia/speedrun-stylus:0.1
-   ```
-
-**What to expect after pulling the Docker image:**
-
-![Docker Image Pulled](./assets/DockerImgSpeedrun.png)
-
-<p align="center"><em>Docker image successfully pulled and ready to use</em></p>
-
-Before running the Docker container, make sure you have pulled the image and cloned the correct branch for your challenge.
 
 ---
 
@@ -103,6 +110,13 @@ Before running the Docker container, make sure you have pulled the image and clo
   Or as a single line:
   ```
   docker run --name speedrun-stylus -it -v ${PWD}:/app -p 3000:3000 abxglia/speedrun-stylus:0.1
+  ```
+- **MAC:**
+  ```
+  docker run --name speedrun-stylus -it \
+      -v $(pwd):/app \
+      -p 3000:3000 \
+      abxglia/speedrun-stylus-mac:0.1
   ```
 
 **What to expect after running the container:**
