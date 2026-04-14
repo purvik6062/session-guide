@@ -64,38 +64,6 @@ Note: Never share your Secret Recovery Phrase (SRP) or private keys. Anyone with
 
    ![MetaMask popup](./assets/metamasm_popup.png)
 
-### Option 2: Sign in with Secret Recovery Phrase (SRP)
-
-1. Click on Continue with Secret Recovery Phrase button.
-
-   ![Continue with SRP](./assets/continue_with_srp.png)
-
-2. Reveal the SRP and store it offline in a safe place by clicking on "Tap to reveal" text. Do not share it with anyone. You can take a screenshot/picture of the SRP to store it offline or else you can write it down on a piece of paper.
-
-   ![Tap to reveal SRP](./assets/tap_to_reveal.png)
-
-   ![Do not share SRP](./assets/do_not_share_this_secret_phrase_with_anyone.png)
-
-***Note : Make sure you stored the SRP in the correct order as it will be used in the next step to confirm the SRP.***
-
-3. Confirm your SRP to finish wallet setup by clicking the missing words in the order of the SRP.
-
-   ![Confirm SRP](./assets/confirm_secret_phrase.png)
-
-4. Help improve MetaMask by sharing usage data (optional).
-
-   ![Help improve MetaMask](./assets/help_improve_metamask.png)
-
-5. You should see a completion screen. Click Done.
-
-   ![Setup done](./assets/done.png)
-
-Optional: If prompted with non-EVM content (e.g., Solana), ignore or close it; MetaMask here is used for EVM chains like Arbitrum.
-
-![Ignore unrelated Solana prompt](./assets/do_not_view_solana_account.png)
-
----
-
 ## 2) Pin and Open the MetaMask Extension
 
 
