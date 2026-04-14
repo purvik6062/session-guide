@@ -1,6 +1,6 @@
 ### MetaMask Setup Guide: Install, Secure Wallet, Add Arbitrum Sepolia, and Claim Faucet ETH
 
-This guide walks you through installing MetaMask on Chrome, creating and securing your wallet, adding the Arbitrum Sepolia test network, and claiming test ETH from a faucet. Every step includes a screenshot for quick visual reference.
+This guide walks you through installing MetaMask on Chrome, creating and securing your wallet, adding the Arbitrum Sepolia test network, claiming test ETH from a faucet, and copying your public address or exporting a chain private key when you need them. Every step includes a screenshot for quick visual reference.
 
 Note: Never share your Secret Recovery Phrase (SRP) or private keys. Anyone with them can control your funds.
 
@@ -147,7 +147,57 @@ You’re all set to use MetaMask on Arbitrum Sepolia with test ETH.
 
 ---
 
-## 5) Troubleshooting: Increase Gas Fees (Arbitrum Sepolia Congestion)
+## 5) Get your public address and private key
+
+For EVM networks (Ethereum, Arbitrum, Base, and similar), dapps and faucets almost always ask for your **public address**—the hex string starting with `0x`. MetaMask shows that address rather than a separate “public key” field; paste the address when a site asks for your wallet address or public key.
+
+**Never share your private key** (or Secret Recovery Phrase) with anyone or any website you do not fully trust. Anyone with a private key controls that account on that chain.
+
+### Copy your public address from the home screen
+
+1. Open MetaMask. Under your account name at the top, **hover** over the row of small network icons (and the copy control) directly below it. The addresses appear so you can see which chain is which before you copy.
+
+   ![Hover over icons to see addresses](./assets/hover-over-icons-new.png)
+
+2. On the main view, your account lists supported networks and shortened addresses.
+
+   ![Addresses on the home screen](./assets/addresses.png)
+
+3. Click the **copy** icon next to the network you need (for example **Ethereum** for most EVM testnets). MetaMask confirms when the full address is on your clipboard.
+
+   ![Address copied confirmation](./assets/click-to-copy-new.png)
+
+Use **View all** on that screen if you need additional networks.
+
+### Export a private key for a specific chain (advanced)
+
+Use this only when a trusted tool or workflow explicitly requires a raw private key (for example some local or development setups). Prefer connecting with MetaMask instead of pasting keys when possible.
+
+1. Click your **account name** at the top (for example **Account 1**) to open the accounts list.
+
+   ![Open account selector](./assets/click-on-account-1-new.png)
+
+2. Click the **⋮** (three dots) on the right of the account you want.
+
+   ![Open account menu](./assets/click-on-3-dots-new.png)
+
+3. Choose **Account details**. On the Account screen, open **Private keys**.
+
+   ![Choose Account details](./assets/click-on-account-details.png)
+
+   ![Open Private keys](./assets/click-on-private-keys.png)
+
+4. When MetaMask shows **Enter your password**, type your wallet password and tap **Confirm**. Enter your password only in the MetaMask extension window.
+
+   ![Enter your password](./assets/enter-your-password.png)
+
+5. On the private keys screen, read the warning, then click the **copy** icon next to the network whose key you need (for example **Ethereum**). Store the value securely and do not share it.
+
+   ![Copy private key for a network](./assets/click-ethereum-to-copy-prvkey-new.png)
+
+---
+
+## 6) Troubleshooting: Increase Gas Fees (Arbitrum Sepolia Congestion)
 
 Sometimes there might be network congestion on Arbitrum Sepolia. If your transaction fails or stays pending, you may need to increase gas fees so your transaction can go through. Follow the steps below.
 
